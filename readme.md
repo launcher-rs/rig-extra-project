@@ -1,3 +1,3 @@
-## rig extract
+## rig extra
 
-基于rig的扩展
+基于rig-core的简单扩展
