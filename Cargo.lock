@@ -1355,7 +1355,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -1695,7 +1695,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1889,8 +1889,9 @@ dependencies = [
 
 [[package]]
 name = "rig-core"
-version = "0.12.0"
-source = "git+https://github.com/0xPlaygrounds/rig.git#5bcfaba8f27c4ce6432a3d660ea4728c4bf369c5"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90771abe32248301b0f95ca4e8a30122e0471b7b778700ca6fd563d3e568e472"
 dependencies = [
  "as-any",
  "async-stream",
@@ -1917,8 +1918,9 @@ dependencies = [
 
 [[package]]
 name = "rig-derive"
-version = "0.1.2"
-source = "git+https://github.com/0xPlaygrounds/rig.git#5bcfaba8f27c4ce6432a3d660ea4728c4bf369c5"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4845b05ff220f36ca5f5f12b808414c9a1cf194bab84f0d6fa007fc5962b900"
 dependencies = [
  "convert_case",
  "deluxe",
