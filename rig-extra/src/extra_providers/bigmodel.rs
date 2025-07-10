@@ -37,7 +37,7 @@ impl Client {
                     let mut headers = reqwest::header::HeaderMap::new();
                     headers.insert(
                         "Authorization",
-                        format!("Bearer {}", api_key)
+                        format!("Bearer {api_key}")
                             .parse()
                             .expect("Bearer token should parse"),
                     );
@@ -191,7 +191,7 @@ impl TryFrom<message::Message> for Message {
                     content: collapsed_content,
                 }
             }
-            message::Message::Assistant { content } => {
+            message::Message::Assistant { content, .. } => {
                 let mut texts = Vec::new();
                 let mut tool_calls = Vec::new();
 

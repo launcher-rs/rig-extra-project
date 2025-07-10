@@ -61,7 +61,7 @@ impl ToolDyn for McpToolAdaptor {
                 })
                 .await
                 .map_err(|e| tool::ToolError::ToolCallError(Box::new(e)))?;
-            println!("call_mcp_tool_result {:?}", call_mcp_tool_result);
+            println!("call_mcp_tool_result {call_mcp_tool_result:?}");
 
             Ok(convert_mcp_call_tool_result_to_string(call_mcp_tool_result))
         })
