@@ -1,9 +1,9 @@
-use rig::agent::AgentBuilder;
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::extractor::ExtractorBuilder;
 use rig::message::{MessageError, Text};
 use rig::providers::openai;
 use rig::{OneOrMany, completion, message};
+use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -48,10 +48,7 @@ impl Client {
         }
     }
 
-    pub fn from_env() -> Self {
-        let api_key = std::env::var("BIGMODEL_API_KEY").expect("BIGMODEL_KEY not set");
-        Self::new(&api_key)
-    }
+
 
     fn post(&self, path: &str) -> reqwest::RequestBuilder {
         let url = format!("{}/{}", self.base_url, path).replace("//", "/");
@@ -62,9 +59,9 @@ impl Client {
         CompletionModel::new(self.clone(), model)
     }
 
-    pub fn agent(&self, model: &str) -> AgentBuilder<CompletionModel> {
-        AgentBuilder::new(self.completion_model(model))
-    }
+    // pub fn agent(&self, model: &str) -> AgentBuilder<CompletionModel> {
+    //     AgentBuilder::new(self.completion_model(model))
+    // }
 
     /// Create an extractor builder with the given completion model.
     pub fn extractor<T: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync>(
@@ -72,6 +69,30 @@ impl Client {
         model: &str,
     ) -> ExtractorBuilder<T, CompletionModel> {
         ExtractorBuilder::new(self.completion_model(model))
+    }
+}
+
+impl ProviderClient for Client {
+    fn from_env() -> Self
+    where
+        Self: Sized
+    {
+        let api_key = std::env::var("BIGMODEL_API_KEY").expect("BIGMODEL_KEY not set");
+        Self::new(&api_key)
+    }
+}
+
+impl AsTranscription for Client {}
+
+impl AsEmbeddings for Client {}
+
+
+
+impl CompletionClient for Client {
+    type CompletionModel = CompletionModel;
+
+    fn completion_model(&self, model: &str) -> Self::CompletionModel {
+        CompletionModel::new(self.clone(), model)
     }
 }
 
@@ -324,17 +345,31 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
                             "Response contained no message or tool call (empty)".to_owned(),
                         )
                     })?;
+                    // let usage = completion::Usage {
+                    //     input_tokens: response.usage.prompt_tokens as u64,
+                    //     output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
+                    //         as u64,
+                    //     total_tokens: response.usage.total_tokens as u64,
+                    // };
                     tracing::debug!("response choices: {:?}: ", choice);
                     Ok(completion::CompletionResponse {
                         choice,
+                        // usage,
                         raw_response: response,
                     })
                 } else {
                     let choice = OneOrMany::one(message::AssistantContent::Text(Text {
                         text: content.clone().unwrap_or_else(|| "".to_owned()),
                     }));
+                    // let usage = completion::Usage {
+                    //     input_tokens: response.usage.prompt_tokens as u64,
+                    //     output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
+                    //         as u64,
+                    //     total_tokens: response.usage.total_tokens as u64,
+                    // };
                     Ok(completion::CompletionResponse {
                         choice,
+                        // usage,
                         raw_response: response,
                     })
                 }
@@ -352,6 +387,20 @@ pub struct CompletionModel {
     client: Client,
     pub model: String,
 }
+
+// impl completion::CompletionModelDyn for CompletionModel {
+//     async fn completion(&self, request: CompletionRequest) -> Result<completion::CompletionResponse<()>, CompletionError> {
+//
+//     }
+//
+//     async fn stream(&self, request: CompletionRequest) -> Result<StreamingCompletionResponse<()>, CompletionError> {
+//
+//     }
+//
+//     fn completion_request(&self, prompt: completion::Message) -> CompletionRequestBuilder<CompletionModelHandle<'_>> {
+//         todo!()
+//     }
+// }
 
 // 函数定义
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -504,3 +553,5 @@ impl completion::CompletionModel for CompletionModel {
         send_compatible_streaming_request(builder).await
     }
 }
+
+

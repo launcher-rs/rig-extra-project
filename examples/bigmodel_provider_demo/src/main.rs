@@ -7,6 +7,8 @@ use rig_extra::tool::Tool;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use rig_extra::client::CompletionClient;
+
 #[derive(Deserialize)]
 struct OperationArgs {
     x: i32,

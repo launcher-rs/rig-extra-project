@@ -12,6 +12,7 @@ use rmcp::{
     model::{ClientCapabilities, ClientInfo, Implementation},
     transport::SseClientTransport,
 };
+use rig_extra::client::CompletionClient;
 
 #[tokio::main]
 async fn main() {

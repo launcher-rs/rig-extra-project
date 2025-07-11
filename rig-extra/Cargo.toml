@@ -1,6 +1,6 @@
 [package]
 name = "rig-extra"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 authors = ["cyberdoors"]
 keywords = ["rig-core-extra", "bigmodel"]
@@ -16,7 +16,10 @@ reqwest = "0.12.15"
 serde_json = "1.0.135"
 tracing = "0.1.41"
 schemars = "0.8.22"
+rand = "0.9.1"
 
+[dev-dependencies]
+tokio = {version = "1",features = ["full"]}
 
 # 使用feature ,将 rig-core导入
 [features]
@@ -32,3 +35,4 @@ rig-worker = ["rig-core/worker"]
 rig-mcp = ["rig-core/mcp"]
 rig-socks = ["rig-core/socks"]
 rig-reqwest-rustls = ["rig-core/reqwest-rustls"]
+
