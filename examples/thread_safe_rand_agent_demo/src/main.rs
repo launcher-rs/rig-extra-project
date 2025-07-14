@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut handles = vec![];
     let num_tasks = 5;
 
-    println!("\n开始并发执行 {} 个任务...", num_tasks);
+    println!("\n开始并发执行 {num_tasks} 个任务...");
 
     for i in 0..num_tasks {
         let agent_clone = Arc::clone(&agent_arc);
@@ -130,8 +130,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     println!("\n=== 执行结果统计 ===");
-    println!("成功任务数: {}", success_count);
-    println!("失败任务数: {}", error_count);
+    println!("成功任务数: {success_count}");
+    println!("失败任务数: {error_count}");
     println!("成功率: {:.1}%", (success_count as f64 / num_tasks as f64) * 100.0);
 
     // 显示最终状态
@@ -143,7 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("失败统计:");
     for (index, failures, max_failures) in stats {
         let status = if failures >= max_failures { "无效" } else { "有效" };
-        println!("  Agent {}: {}/{} 失败 - {}", index, failures, max_failures, status);
+        println!("  Agent {index}: {failures}/{max_failures} 失败 - {status}");
     }
 
     // 重置失败计数
