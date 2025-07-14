@@ -6,9 +6,9 @@
 //! use std::sync::Arc;
 //! use tokio::task;
 //! use rig::client::ProviderClient;
-//! 
+//! use rig_extra::error::RandAgentError;
 //! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//! async fn main() -> Result<(), RandAgentError> {
 //!     // 创建线程安全的 RandAgent
 //!
 //!     //创建多个客户端 
@@ -32,7 +32,7 @@
 //!         let handle = task::spawn(async move {
 //!             let response = agent_clone.prompt(&format!("Hello from task {}", i)).await?;
 //!             println!("Task {} response: {}", i, response);
-//!             Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+//!             Ok::<(), RandAgentError>(())
 //!         });
 //!         handles.push(handle);
 //!     }
@@ -53,6 +53,8 @@ use rig::agent::Agent;
 use rig::client::builder::BoxAgent;
 use rig::client::completion::CompletionModelHandle;
 use rig::completion::Prompt;
+
+use crate::error::RandAgentError;
 
 /// 线程安全的 RandAgent，支持多线程并发访问
 pub struct ThreadSafeRandAgent {
@@ -144,7 +146,7 @@ impl ThreadSafeRandAgent {
     pub async fn prompt(
         &self,
         message: &str,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, RandAgentError> {
         // 第一步：选择代理并获取其信息
         let (agent_index, provider, model) = {
             let agents = self.agents.lock().unwrap();
@@ -158,7 +160,7 @@ impl ThreadSafeRandAgent {
                 .collect();
 
             if valid_indices.is_empty() {
-                return Err("No valid agents available".into());
+                return Err(RandAgentError::NoValidAgents);
             }
 
             // 随机选择一个有效代理
@@ -186,7 +188,7 @@ impl ThreadSafeRandAgent {
             };
 
             // 在锁外执行异步操作
-            agent.prompt(message).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+            agent.prompt(message).await.map_err(|e| RandAgentError::AgentError(Box::new(e)))
         };
 
         // 第三步：根据结果更新失败计数

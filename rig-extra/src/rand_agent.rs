@@ -21,10 +21,13 @@
 //! use rig::client::ProviderClient;
 //! use rig::client::completion::CompletionClientDyn;
 //! use rig_extra::rand_agent::RandAgentBuilder;
+//! use rig_extra::error::RandAgentError;
+//! 
 //! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//! async fn main() -> Result<(), RandAgentError> {
 //!     // 创建多个客户端
 //!     
+//! use rig_extra::error::RandAgentError;
 //! let client1 = Client::from_env();
 //!     let client2 = Client::from_env();
 //!
@@ -56,6 +59,7 @@ use rig::agent::{Agent};
 use rig::client::builder::BoxAgent;
 use rig::completion::Prompt;
 use rig::client::completion::CompletionModelHandle;
+use crate::error::RandAgentError;
 
 
 /// Agent状态，包含agent实例和失败计数
@@ -163,11 +167,11 @@ impl<'a> RandAgent<'a> {
     pub async fn prompt(
         &mut self,
         message: &str,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, RandAgentError> {
         let agent_state = self
             .get_random_valid_agent()
             .await
-            .ok_or("No valid agents available")?;
+            .ok_or(RandAgentError::NoValidAgents)?;
 
         // 打印使用的provider和model
         tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
@@ -178,7 +182,7 @@ impl<'a> RandAgent<'a> {
             }
             Err(e) => {
                 agent_state.record_failure();
-                Err(e.into())
+                Err(RandAgentError::AgentError(Box::new(e)))
             }
         }
     }

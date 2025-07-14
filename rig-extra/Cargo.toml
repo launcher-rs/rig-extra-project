@@ -1,6 +1,6 @@
 [package]
 name = "rig-extra"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 authors = ["cyberdoors"]
 keywords = ["rig-core-extra", "bigmodel"]
@@ -17,6 +17,8 @@ serde_json = "1.0.135"
 tracing = "0.1.41"
 schemars = "0.8.22"
 rand = "0.9.1"
+thiserror = "2"
+
 
 [dev-dependencies]
 tokio = {version = "1",features = ["full"]}

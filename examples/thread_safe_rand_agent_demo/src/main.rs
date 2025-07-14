@@ -1,3 +1,4 @@
+use rig_extra::error::RandAgentError;
 use rig_extra::extra_providers::{bigmodel};
 use std::sync::Arc;
 use config::Config;
@@ -16,7 +17,7 @@ struct AgentConfig {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(),RandAgentError> {
     // 设置日志
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -91,19 +92,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     for i in 0..num_tasks {
         let agent_clone = Arc::clone(&agent_arc);
-        let handle = task::spawn(async move {
+        let handle: task::JoinHandle<Result<String, RandAgentError>> = task::spawn(async move {
             let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
             
-            match agent_clone.prompt(&prompt).await {
-                Ok(response) => {
-                    println!("任务 {} 成功: {}", i + 1, response.lines().next().unwrap_or("无响应"));
-                    Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
-                }
-                Err(e) => {
-                    println!("任务 {} 失败: {}", i + 1, e);
-                    Err(e)
-                }
-            }
+            let result = agent_clone.prompt(&prompt).await?;
+            Ok(result)
         });
         handles.push(handle);
     }
@@ -114,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     
     for (i, handle) in handles.into_iter().enumerate() {
         match handle.await {
-            Ok(Ok(())) => {
+            Ok(Ok(_response)) => {
                 success_count += 1;
                 println!("任务 {} 完成", i + 1);
             }

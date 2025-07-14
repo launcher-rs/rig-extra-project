@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use rig_extra::providers::{ollama, openai};
 use rig_extra::client::completion::CompletionClientDyn;
 use rig_extra::rand_agent::RandAgentBuilder;
+use rig_extra::error::RandAgentError;
 
 #[derive(Debug, Deserialize,Serialize)]
 #[serde(rename_all="lowercase")]
@@ -39,7 +40,7 @@ struct AgentConfig {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), RandAgentError> {
     // 1. 读取配置
     let settings = Config::builder()
         .add_source(config::File::with_name("Settings"))
