@@ -52,7 +52,7 @@
 //! ```
 
 use rand::Rng;
-use rig::agent::{Agent, AgentBuilder};
+use rig::agent::{Agent};
 use rig::client::builder::BoxAgent;
 use rig::completion::Prompt;
 use rig::client::completion::CompletionModelHandle;
@@ -113,21 +113,7 @@ impl<'a> RandAgent<'a> {
         }
     }
 
-    /// Create a RandAgent from multiple AgentBuilders
-    #[deprecated(note = "请使用 RandAgentBuilder::add_agent/add_builder 方式构建并传递 provider/model")]
-    pub fn from_builders(_builders: Vec<AgentBuilder<CompletionModelHandle<'a>>>) -> Self {
-        unimplemented!("from_builders 已废弃，请使用 RandAgentBuilder::add_agent/add_builder 方式");
-    }
-
-    /// Create a RandAgent from multiple AgentBuilders with custom max failure count
-    #[deprecated(note = "请使用 RandAgentBuilder::add_agent/add_builder 方式构建并传递 provider/model")]
-    pub fn from_builders_with_max_failures(
-        _builders: Vec<AgentBuilder<CompletionModelHandle<'a>>>,
-        _max_failures: u32,
-    ) -> Self {
-        unimplemented!("from_builders_with_max_failures 已废弃，请使用 RandAgentBuilder::add_agent/add_builder 方式");
-    }
-
+    
     /// Add an agent to the collection
     pub fn add_agent(&mut self, agent: BoxAgent<'a>, provider: String, model: String) {
         self.agents.push(AgentState::new(agent, provider, model, 3)); // 使用默认最大失败次数
@@ -197,14 +183,7 @@ impl<'a> RandAgent<'a> {
         }
     }
 
-    /// Stream a response from a random agent (not implemented due to trait compatibility issues)
-    pub async fn stream_prompt(
-        &self,
-        _message: &str,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        Err("Streaming not implemented for RandAgent".into())
-    }
-
+    
     /// Get all agents (for debugging or inspection)
     pub fn agents(&self) -> &[AgentState<'a>] {
         &self.agents

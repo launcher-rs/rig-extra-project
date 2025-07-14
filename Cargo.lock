@@ -1814,7 +1814,6 @@ dependencies = [
  "config",
  "rig-extra",
  "serde",
- "serde_json",
  "tokio",
 ]
 
@@ -2014,7 +2013,7 @@ dependencies = [
 
 [[package]]
 name = "rig-extra"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "rand 0.9.1",
  "reqwest",
@@ -2543,6 +2542,18 @@ checksum = "8b9ef9bad013ada3808854ceac7b46812a6465ba368859a37e2100283d2d719c"
 dependencies = [
  "cfg-if",
  "once_cell",
+]
+
+[[package]]
+name = "thread_safe_rand_agent_demo"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "rig-extra",
+ "serde",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
