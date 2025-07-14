@@ -91,18 +91,18 @@ impl<'a> AgentState<'a> {
     }
 }
 
-/// A wrapper struct that holds multiple agents and randomly selects one for each invocation
+/// 包装多个代理的结构体，每次调用时随机选择一个代理
 pub struct RandAgent<'a> {
     agents: Vec<AgentState<'a>>,
 }
 
 impl<'a> RandAgent<'a> {
-    /// Create a new RandAgent with the given agents
+    /// 使用给定的代理创建新的 RandAgent
     pub fn new(agents: Vec<(BoxAgent<'a>, String, String)>) -> Self {
         Self::with_max_failures(agents, 3) // 默认最大失败次数为3
     }
 
-    /// Create a new RandAgent with custom max failure count
+    /// 使用自定义最大失败次数创建新的 RandAgent
     pub fn with_max_failures(agents: Vec<(BoxAgent<'a>, String, String)>, max_failures: u32) -> Self {
         let agent_states = agents
             .into_iter()
@@ -114,32 +114,32 @@ impl<'a> RandAgent<'a> {
     }
 
     
-    /// Add an agent to the collection
+    /// 向集合中添加代理
     pub fn add_agent(&mut self, agent: BoxAgent<'a>, provider: String, model: String) {
         self.agents.push(AgentState::new(agent, provider, model, 3)); // 使用默认最大失败次数
     }
 
-    /// Add an agent to the collection with custom max failure count
+    /// 使用自定义最大失败次数向集合中添加代理
     pub fn add_agent_with_max_failures(&mut self, agent: BoxAgent<'a>, provider: String, model: String, max_failures: u32) {
         self.agents.push(AgentState::new(agent, provider, model, max_failures));
     }
 
-    /// Get the number of valid agents
+    /// 获取有效代理的数量
     pub fn len(&self) -> usize {
         self.agents.iter().filter(|state| state.is_valid()).count()
     }
 
-    /// Get the total number of agents (including invalid ones)
+    /// 获取代理总数（包括无效的）
     pub fn total_len(&self) -> usize {
         self.agents.len()
     }
 
-    /// Check if there are any valid agents
+    /// 检查是否有有效代理
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Get a random valid agent from the collection
+    /// 从集合中获取一个随机有效代理
     async fn get_random_valid_agent(&mut self) -> Option<&mut AgentState<'a>> {
         let valid_indices: Vec<usize> = self
             .agents
@@ -159,7 +159,7 @@ impl<'a> RandAgent<'a> {
         self.agents.get_mut(agent_index)
     }
 
-    /// Prompt a random valid agent with the given message
+    /// 使用随机有效代理发送消息
     pub async fn prompt(
         &mut self,
         message: &str,
@@ -184,12 +184,12 @@ impl<'a> RandAgent<'a> {
     }
 
     
-    /// Get all agents (for debugging or inspection)
+    /// 获取所有代理（用于调试或检查）
     pub fn agents(&self) -> &[AgentState<'a>] {
         &self.agents
     }
 
-    /// Get failure statistics
+    /// 获取失败统计信息
     pub fn failure_stats(&self) -> Vec<(usize, u32, u32)> {
         self.agents
             .iter()
@@ -198,7 +198,7 @@ impl<'a> RandAgent<'a> {
             .collect()
     }
 
-    /// Reset failure counts for all agents
+    /// 重置所有代理的失败计数
     pub fn reset_failures(&mut self) {
         for state in &mut self.agents {
             state.failure_count = 0;
@@ -206,17 +206,16 @@ impl<'a> RandAgent<'a> {
     }
 }
 
-// Note: RandAgent cannot implement Clone because BoxAgent<'a> may not implement Clone
-// If you need to clone a RandAgent, you'll need to rebuild it from the original agents
 
-/// Builder for creating RandAgent instances
+
+/// 用于创建 RandAgent 实例的构建器
 pub struct RandAgentBuilder<'a> {
     agents: Vec<(BoxAgent<'a>, String, String)>,
     max_failures: u32,
 }
 
 impl<'a> RandAgentBuilder<'a> {
-    /// Create a new RandAgentBuilder
+    /// 创建新的 RandAgentBuilder
     pub fn new() -> Self {
         Self {
             agents: Vec::new(),
@@ -224,13 +223,13 @@ impl<'a> RandAgentBuilder<'a> {
         }
     }
 
-    /// Set the maximum number of consecutive failures before marking an agent as invalid
+    /// 设置标记代理为无效前的最大连续失败次数
     pub fn max_failures(mut self, max_failures: u32) -> Self {
         self.max_failures = max_failures;
         self
     }
 
-    /// Add an agent to the builder
+    /// 向构建器添加代理
     ///
     /// # 参数
     /// - agent: 代理实例
@@ -241,7 +240,7 @@ impl<'a> RandAgentBuilder<'a> {
         self
     }
 
-    /// Add an agent from an AgentBuilder
+    /// 从 AgentBuilder 添加代理
     ///
     /// # 参数
     /// - builder: AgentBuilder 实例
@@ -254,7 +253,7 @@ impl<'a> RandAgentBuilder<'a> {
         self
     }
 
-    /// Build the RandAgent
+    /// 构建 RandAgent
     pub fn build(self) -> RandAgent<'a> {
         RandAgent::with_max_failures(self.agents, self.max_failures)
     }

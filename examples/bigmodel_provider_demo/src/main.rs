@@ -123,7 +123,7 @@ async fn main() {
     let mut stream = tool_agent.stream_prompt("8+12=").await.unwrap();
     stream_to_stdout(&tool_agent, &mut stream).await.unwrap();
 
-    // extract
+    // 提取
     tracing::info!("Extracting...:");
     let data_extractor = client.extractor::<Person>(BIGMODEL_GLM_4_FLASH).build();
 

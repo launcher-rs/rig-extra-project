@@ -26,9 +26,9 @@ pub fn merge_inplace(a: &mut serde_json::Value, b: serde_json::Value) {
     }
 }
 
-/// This module is helpful in cases where raw json objects are serialized and deserialized as
-///  strings such as `"{\"key\": \"value\"}"`. This might seem odd but it's actually how some
-///  some extra_providers such as OpenAI return function arguments (for some reason).
+/// 此模块在处理原始 JSON 对象被序列化和反序列化为字符串的情况下很有用，
+/// 例如 `"{\"key\": \"value\"}"`。这可能看起来很奇怪，但实际上是一些
+/// 提供方（如 OpenAI）返回函数参数的方式（出于某种原因）。
 pub mod stringified_json {
     use serde::{self, Deserialize, Deserializer, Serializer};
 

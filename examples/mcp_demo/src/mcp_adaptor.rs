@@ -1,4 +1,4 @@
-// 将mcp转换为 rig tool
+// 将 MCP 转换为 rig tool
 
 use rig_extra::completion::ToolDefinition;
 use rig_extra::tool::{ToolDyn, ToolError};
@@ -32,7 +32,7 @@ impl ToolDyn for McpToolAdaptor {
                 .clone()
                 .unwrap_or_default()
                 .to_string(),
-            // parameters: self.tool.schema_as_json_value(),
+            // 参数：self.tool.schema_as_json_value(),
             parameters: json!({
                 "type": "object",
                 "properties": self.tool.schema_as_json_value(),

@@ -14,7 +14,7 @@ use rig::streaming::StreamingCompletionResponse;
 use crate::json_utils;
 
 // ================================================================
-// Main BIGMODEL Client
+// BIGMODEL 客户端
 // ================================================================
 const BIGMODEL_API_BASE_URL: &str = "https://open.bigmodel.cn/api/paas/v4/";
 
@@ -59,11 +59,9 @@ impl Client {
         CompletionModel::new(self.clone(), model)
     }
 
-    // pub fn agent(&self, model: &str) -> AgentBuilder<CompletionModel> {
-    //     AgentBuilder::new(self.completion_model(model))
-    // }
 
-    /// Create an extractor builder with the given completion model.
+
+    /// 为completion模型创建提取构建器
     pub fn extractor<T: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync>(
         &self,
         model: &str,
@@ -262,7 +260,6 @@ impl From<message::ToolCall> for ToolCall {
     fn from(tool_call: message::ToolCall) -> Self {
         Self {
             id: tool_call.id,
-            // TODO: update index when we have it
             index: 0,
             r#type: ToolType::Function,
             function: CallFunction {
@@ -388,19 +385,7 @@ pub struct CompletionModel {
     pub model: String,
 }
 
-// impl completion::CompletionModelDyn for CompletionModel {
-//     async fn completion(&self, request: CompletionRequest) -> Result<completion::CompletionResponse<()>, CompletionError> {
-//
-//     }
-//
-//     async fn stream(&self, request: CompletionRequest) -> Result<StreamingCompletionResponse<()>, CompletionError> {
-//
-//     }
-//
-//     fn completion_request(&self, prompt: completion::Message) -> CompletionRequestBuilder<CompletionModelHandle<'_>> {
-//         todo!()
-//     }
-// }
+
 
 // 函数定义
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -431,19 +416,19 @@ impl CompletionModel {
         &self,
         completion_request: CompletionRequest,
     ) -> Result<Value, CompletionError> {
-        // Build up the order of messages (context, chat_history, prompt)
+        // 构建消息顺序（上下文、聊天历史、提示）
         let mut partial_history = vec![];
         if let Some(docs) = completion_request.normalized_documents() {
             partial_history.push(docs);
         }
         partial_history.extend(completion_request.chat_history);
 
-        // Initialize full history with preamble (or empty if non-existent)
+        // 使用前言初始化完整历史（如果不存在则为空）
         let mut full_history: Vec<Message> = completion_request
             .preamble
             .map_or_else(Vec::new, |preamble| vec![Message::system(&preamble)]);
 
-        // Convert and extend the rest of the history
+        // 转换并扩展其余历史
         full_history.extend(
             partial_history
                 .into_iter()

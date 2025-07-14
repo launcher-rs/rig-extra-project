@@ -3,3 +3,14 @@ bigmodel_api_key = ""
 
 
 mcp_addr = "http://127.0.0.1:8000/sse"
+
+[[agents]]
+provider = "bigmodel"
+model_name = "glm-4-flash"
+api_key = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[[agents]]
+provider = "ollama"
+model_name = "qwen2.5:14b"
+api_key = "ollama"
+api_base_url = "http://127.0.0.1:11434"
