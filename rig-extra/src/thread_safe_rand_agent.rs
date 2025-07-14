@@ -15,7 +15,7 @@
 //!     let client1 = Client::from_env();
 //!     let client2 = Client::from_env();
 //!     use rig::client::completion::CompletionClientDyn;
-//! use rig::completion::Prompt;
+//!     use rig::completion::Prompt;
 //!
 //!
 //!     let thread_safe_agent = ThreadSafeRandAgentBuilder::new()
@@ -55,6 +55,8 @@ use rig::client::completion::CompletionModelHandle;
 use rig::completion::{Message, Prompt, PromptError};
 use tokio::sync::Mutex;
 
+/// 推荐使用 ThreadSafeRandAgent，不推荐使用 RandAgent。
+/// RandAgent 已不再维护，ThreadSafeRandAgent 支持多线程并发访问且更安全。
 /// 线程安全的 RandAgent，支持多线程并发访问
 pub struct ThreadSafeRandAgent {
     agents: Arc<Mutex<Vec<ThreadSafeAgentState>>>,
