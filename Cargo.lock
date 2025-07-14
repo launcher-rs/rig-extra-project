@@ -2013,7 +2013,7 @@ dependencies = [
 
 [[package]]
 name = "rig-extra"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "rand 0.9.1",
  "reqwest",

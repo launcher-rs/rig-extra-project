@@ -47,7 +47,7 @@
 //!     println!("Response: {}", response);
 //!
 //!     // 查看失败统计
-//!     let stats = rand_agent.failure_stats();
+//!     let stats = rand_agent.failure_stats().await;
 //!     println!("Failure stats: {:?}", stats);
 //!
 //!     Ok(())
@@ -57,9 +57,10 @@
 use rand::Rng;
 use rig::agent::{Agent};
 use rig::client::builder::BoxAgent;
-use rig::completion::Prompt;
+use rig::completion::{Message, Prompt, PromptError};
 use rig::client::completion::CompletionModelHandle;
 use crate::error::RandAgentError;
+use tokio::sync::Mutex;
 
 
 /// Agent状态，包含agent实例和失败计数
@@ -97,7 +98,21 @@ impl<'a> AgentState<'a> {
 
 /// 包装多个代理的结构体，每次调用时随机选择一个代理
 pub struct RandAgent<'a> {
-    agents: Vec<AgentState<'a>>,
+    agents: Mutex<Vec<AgentState<'a>>>,
+}
+
+impl Prompt for RandAgent<'_> {
+    #[allow(refining_impl_trait)]
+    async fn prompt(&self, prompt: impl Into<Message> + Send) -> Result<String, PromptError> {
+        let mut agents = self.agents.lock().await;
+        let agent_state = Self::get_random_valid_agent(&mut agents)
+            .await
+            .ok_or(RandAgentError::NoValidAgents).unwrap();
+
+        tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
+        let content = agent_state.agent.prompt(prompt).await?;
+        Ok(content)
+    }
 }
 
 impl<'a> RandAgent<'a> {
@@ -113,40 +128,39 @@ impl<'a> RandAgent<'a> {
             .map(|(agent, provider, model)| AgentState::new(agent, provider, model, max_failures))
             .collect();
         Self {
-            agents: agent_states,
+            agents: Mutex::new(agent_states),
         }
     }
 
     
     /// 向集合中添加代理
-    pub fn add_agent(&mut self, agent: BoxAgent<'a>, provider: String, model: String) {
-        self.agents.push(AgentState::new(agent, provider, model, 3)); // 使用默认最大失败次数
+    pub async fn add_agent(&self, agent: BoxAgent<'a>, provider: String, model: String) {
+        self.agents.lock().await.push(AgentState::new(agent, provider, model, 3)); // 使用默认最大失败次数
     }
 
     /// 使用自定义最大失败次数向集合中添加代理
-    pub fn add_agent_with_max_failures(&mut self, agent: BoxAgent<'a>, provider: String, model: String, max_failures: u32) {
-        self.agents.push(AgentState::new(agent, provider, model, max_failures));
+    pub async fn add_agent_with_max_failures(&self, agent: BoxAgent<'a>, provider: String, model: String, max_failures: u32) {
+        self.agents.lock().await.push(AgentState::new(agent, provider, model, max_failures));
     }
 
     /// 获取有效代理的数量
-    pub fn len(&self) -> usize {
-        self.agents.iter().filter(|state| state.is_valid()).count()
+    pub async fn len(&self) -> usize {
+        self.agents.lock().await.iter().filter(|state| state.is_valid()).count()
     }
 
     /// 获取代理总数（包括无效的）
-    pub fn total_len(&self) -> usize {
-        self.agents.len()
+    pub async fn total_len(&self) -> usize {
+        self.agents.lock().await.len()
     }
 
     /// 检查是否有有效代理
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub async fn is_empty(&self) -> bool {
+        self.len().await == 0
     }
 
     /// 从集合中获取一个随机有效代理
-    async fn get_random_valid_agent(&mut self) -> Option<&mut AgentState<'a>> {
-        let valid_indices: Vec<usize> = self
-            .agents
+    async fn get_random_valid_agent<'b>(agents: &'b mut Vec<AgentState<'a>>) -> Option<&'b mut AgentState<'a>> {
+        let valid_indices: Vec<usize> = agents
             .iter()
             .enumerate()
             .filter(|(_, state)| state.is_valid())
@@ -160,16 +174,16 @@ impl<'a> RandAgent<'a> {
         let mut rng = rand::rng();
         let random_index = rng.random_range(0..valid_indices.len());
         let agent_index = valid_indices[random_index];
-        self.agents.get_mut(agent_index)
+        agents.get_mut(agent_index)
     }
 
     /// 使用随机有效代理发送消息
     pub async fn prompt(
-        &mut self,
+        &self,
         message: &str,
     ) -> Result<String, RandAgentError> {
-        let agent_state = self
-            .get_random_valid_agent()
+        let mut agents = self.agents.lock().await;
+        let agent_state = Self::get_random_valid_agent(&mut agents)
             .await
             .ok_or(RandAgentError::NoValidAgents)?;
 
@@ -188,14 +202,12 @@ impl<'a> RandAgent<'a> {
     }
 
     
-    /// 获取所有代理（用于调试或检查）
-    pub fn agents(&self) -> &[AgentState<'a>] {
-        &self.agents
-    }
 
     /// 获取失败统计信息
-    pub fn failure_stats(&self) -> Vec<(usize, u32, u32)> {
+    pub async fn failure_stats(&self) -> Vec<(usize, u32, u32)> {
         self.agents
+            .lock()
+            .await
             .iter()
             .enumerate()
             .map(|(i, state)| (i, state.failure_count, state.max_failures))
@@ -203,8 +215,8 @@ impl<'a> RandAgent<'a> {
     }
 
     /// 重置所有代理的失败计数
-    pub fn reset_failures(&mut self) {
-        for state in &mut self.agents {
+    pub async fn reset_failures(&self) {
+        for state in self.agents.lock().await.iter_mut() {
             state.failure_count = 0;
         }
     }

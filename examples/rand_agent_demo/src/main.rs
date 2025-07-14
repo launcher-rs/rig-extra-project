@@ -96,10 +96,10 @@ async fn main() -> Result<(), RandAgentError> {
             }
         }
     }
-    let mut rand_agent = rand_agent_builder.build();
+    let rand_agent = rand_agent_builder.build();
 
-    println!("Created RandAgent with {} total agents", rand_agent.total_len());
-    println!("Valid agents: {}", rand_agent.len());
+    println!("Created RandAgent with {} total agents", rand_agent.total_len().await);
+    println!("Valid agents: {}", rand_agent.len().await);
 
     // 多次调用，每次都会随机选择一个有效代理
     for i in 1..=5 {
@@ -115,19 +115,19 @@ async fn main() -> Result<(), RandAgentError> {
         }
 
         // 显示失败统计
-        let stats = rand_agent.failure_stats();
+        let stats = rand_agent.failure_stats().await;
         println!("失败统计:");
         for (index, failures, max_failures) in stats {
             let status = if failures >= max_failures { "无效" } else { "有效" };
             println!("  Agent {index}: {failures}/{max_failures} 失败 - {status}");
         }
-        println!("有效代理数量: {}/{}", rand_agent.len(), rand_agent.total_len());
+        println!("有效代理数量: {}/{}", rand_agent.len().await, rand_agent.total_len().await);
     }
 
     // 演示重置失败计数
     println!("\n--- 重置所有代理的失败计数 ---");
-    rand_agent.reset_failures();
-    println!("重置后有效代理数量: {}/{}", rand_agent.len(), rand_agent.total_len());
+    rand_agent.reset_failures().await;
+    println!("重置后有效代理数量: {}/{}", rand_agent.len().await, rand_agent.total_len().await);
 
     Ok(())
 } 
