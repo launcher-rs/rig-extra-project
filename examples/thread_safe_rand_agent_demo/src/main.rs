@@ -6,6 +6,7 @@ use tokio::task;
 use rig_extra::client::completion::CompletionClientDyn;
 use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::providers::{ollama, openai};
+use rig_extra::streaming::{stream_to_stdout, StreamingPrompt};
 use rig_extra::thread_safe_rand_agent::ThreadSafeRandAgentBuilder;
 
 #[derive(Debug, Deserialize)]
@@ -86,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 创建多个并发任务
     let mut handles = vec![];
-    let num_tasks = 5;
+    let num_tasks = 2;
 
     println!("\n开始并发执行 {num_tasks} 个任务...");
 
@@ -94,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
         let agent_clone = Arc::clone(&agent_arc);
         let handle: task::JoinHandle<Result<String, PromptError>> = task::spawn(async move {
             let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
-            
+            // let prompt = "将一个笑话".to_string();
             let result = agent_clone.prompt(&prompt).await?;
             Ok(result)
         });
@@ -107,9 +108,9 @@ async fn main() -> anyhow::Result<()> {
     
     for (i, handle) in handles.into_iter().enumerate() {
         match handle.await {
-            Ok(Ok(_response)) => {
+            Ok(Ok(response)) => {
                 success_count += 1;
-                println!("任务 {} 完成", i + 1);
+                println!("任务 {} 完成: {}", i + 1,response);
             }
             Ok(Err(e)) => {
                 error_count += 1;
@@ -142,6 +143,14 @@ async fn main() -> anyhow::Result<()> {
     // 重置失败计数
     agent_arc.reset_failures().await;
     println!("已重置所有代理的失败计数");
+    
+    // 异步调用
+    if let Some(agent) = agent_arc.get_random_valid_agent_state().await{
+        let agent = agent.agent.clone();
+        let mut stream = agent.stream_prompt("写一个故事").await?;
+        stream_to_stdout(&agent, &mut stream).await?;
+    }
+    
 
     Ok(())
 } 

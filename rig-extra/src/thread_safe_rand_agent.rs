@@ -63,19 +63,18 @@ pub struct ThreadSafeRandAgent {
 /// 线程安全的 Agent 状态
 #[derive(Clone)]
 pub struct ThreadSafeAgentState {
-    agent: Arc<BoxAgent<'static>>,
-    provider: String,
-    model: String,
-    failure_count: u32,
-    max_failures: u32,
+    pub agent: Arc<BoxAgent<'static>>,
+    pub provider: String,
+    pub model: String,
+    pub failure_count: u32,
+    pub max_failures: u32,
 }
 
 impl Prompt for ThreadSafeRandAgent {
     #[allow(refining_impl_trait)]
     async fn prompt(&self, prompt: impl Into<Message> + Send) -> Result<String, PromptError> {
         // 第一步：选择代理并获取其信息
-        let mut agents = self.agents.lock().await;
-        let agent_state = Self::get_random_valid_agent(&mut agents)
+        let mut agent_state = self.get_random_valid_agent_state()
             .await
             .ok_or(PromptError::MaxDepthError {
                 max_depth: 0,
@@ -158,7 +157,9 @@ impl ThreadSafeRandAgent {
     }
     
     /// 从集合中获取一个随机有效代理
-    async fn get_random_valid_agent(agents:  &mut [ThreadSafeAgentState]) -> Option<&mut ThreadSafeAgentState> {
+    pub async fn get_random_valid_agent_state(&self) -> Option<ThreadSafeAgentState> {
+        let mut agents = self.agents.lock().await;
+
         let valid_indices: Vec<usize> = agents
             .iter()
             .enumerate()
@@ -173,7 +174,7 @@ impl ThreadSafeRandAgent {
         let mut rng = rand::rng();
         let random_index = rng.random_range(0..valid_indices.len());
         let agent_index = valid_indices[random_index];
-        agents.get_mut(agent_index)
+        agents.get_mut(agent_index).cloned()
     }
 
     /// 获取总代理数量（包括无效的）
