@@ -1,10 +1,10 @@
-use rig_extra::error::RandAgentError;
 use rig_extra::extra_providers::{bigmodel};
 use std::sync::Arc;
 use config::Config;
 use serde::Deserialize;
 use tokio::task;
 use rig_extra::client::completion::CompletionClientDyn;
+use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::providers::{ollama, openai};
 use rig_extra::thread_safe_rand_agent::ThreadSafeRandAgentBuilder;
 
@@ -17,7 +17,7 @@ struct AgentConfig {
 }
 
 #[tokio::main]
-async fn main() -> Result<(),RandAgentError> {
+async fn main() -> anyhow::Result<()> {
     // 设置日志
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -78,8 +78,8 @@ async fn main() -> Result<(),RandAgentError> {
 
 
 
-    println!("创建了线程安全的 RandAgent，总代理数量: {}", thread_safe_agent.total_len());
-    println!("有效代理数量: {}", thread_safe_agent.len());
+    println!("创建了线程安全的 RandAgent，总代理数量: {}", thread_safe_agent.total_len().await);
+    println!("有效代理数量: {}", thread_safe_agent.len().await);
 
     // 将线程安全代理包装在 Arc 中以支持多线程共享
     let agent_arc = Arc::new(thread_safe_agent);
@@ -92,7 +92,7 @@ async fn main() -> Result<(),RandAgentError> {
 
     for i in 0..num_tasks {
         let agent_clone = Arc::clone(&agent_arc);
-        let handle: task::JoinHandle<Result<String, RandAgentError>> = task::spawn(async move {
+        let handle: task::JoinHandle<Result<String, PromptError>> = task::spawn(async move {
             let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
             
             let result = agent_clone.prompt(&prompt).await?;
@@ -129,10 +129,10 @@ async fn main() -> Result<(),RandAgentError> {
 
     // 显示最终状态
     println!("\n=== 最终状态 ===");
-    println!("总代理数量: {}", agent_arc.total_len());
-    println!("有效代理数量: {}", agent_arc.len());
+    println!("总代理数量: {}", agent_arc.total_len().await);
+    println!("有效代理数量: {}", agent_arc.len().await);
     
-    let stats = agent_arc.failure_stats();
+    let stats = agent_arc.failure_stats().await;
     println!("失败统计:");
     for (index, failures, max_failures) in stats {
         let status = if failures >= max_failures { "无效" } else { "有效" };
@@ -140,7 +140,7 @@ async fn main() -> Result<(),RandAgentError> {
     }
 
     // 重置失败计数
-    agent_arc.reset_failures();
+    agent_arc.reset_failures().await;
     println!("已重置所有代理的失败计数");
 
     Ok(())

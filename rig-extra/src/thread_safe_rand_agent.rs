@@ -15,7 +15,8 @@
 //!     let client1 = Client::from_env();
 //!     let client2 = Client::from_env();
 //!     use rig::client::completion::CompletionClientDyn;
-//! 
+//! use rig::completion::Prompt;
+//!
 //!
 //!     let thread_safe_agent = ThreadSafeRandAgentBuilder::new()
 //!         .max_failures(3)
@@ -46,15 +47,13 @@
 //! }
 //! ```
 
-
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use rand::Rng;
 use rig::agent::Agent;
 use rig::client::builder::BoxAgent;
 use rig::client::completion::CompletionModelHandle;
-use rig::completion::Prompt;
-
-use crate::error::RandAgentError;
+use rig::completion::{Message, Prompt, PromptError};
+use tokio::sync::Mutex;
 
 /// 线程安全的 RandAgent，支持多线程并发访问
 pub struct ThreadSafeRandAgent {
@@ -62,12 +61,41 @@ pub struct ThreadSafeRandAgent {
 }
 
 /// 线程安全的 Agent 状态
+#[derive(Clone)]
 pub struct ThreadSafeAgentState {
     agent: Arc<BoxAgent<'static>>,
     provider: String,
     model: String,
     failure_count: u32,
     max_failures: u32,
+}
+
+impl Prompt for ThreadSafeRandAgent {
+    #[allow(refining_impl_trait)]
+    async fn prompt(&self, prompt: impl Into<Message> + Send) -> Result<String, PromptError> {
+        // 第一步：选择代理并获取其信息
+        let mut agents = self.agents.lock().await;
+        let agent_state = Self::get_random_valid_agent(&mut agents)
+            .await
+            .ok_or(PromptError::MaxDepthError {
+                max_depth: 0,
+                chat_history: vec![],
+                prompt: "没有有效agent".into(),
+            })?;
+
+        // 第二步：执行异步操作
+        tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
+        match agent_state.agent.prompt(prompt).await {
+            Ok(content) => {
+                agent_state.record_success();
+                Ok(content)
+            }
+            Err(e) => {
+                agent_state.record_failure();
+                Err(e)
+            }
+        }
+    }
 }
 
 impl ThreadSafeAgentState {
@@ -112,103 +140,56 @@ impl ThreadSafeRandAgent {
     }
 
     /// 添加代理到集合中
-    pub fn add_agent(&self, agent: BoxAgent<'static>, provider: String, model: String) {
-        let mut agents = self.agents.lock().unwrap();
+    pub async fn add_agent(&self, agent: BoxAgent<'static>, provider: String, model: String) {
+        let mut agents = self.agents.lock().await;
         agents.push(ThreadSafeAgentState::new(agent, provider, model, 3));
     }
 
     /// 使用自定义最大失败次数添加代理
-    pub fn add_agent_with_max_failures(&self, agent: BoxAgent<'static>, provider: String, model: String, max_failures: u32) {
-        let mut agents = self.agents.lock().unwrap();
+    pub async fn add_agent_with_max_failures(&self, agent: BoxAgent<'static>, provider: String, model: String, max_failures: u32) {
+        let mut agents = self.agents.lock().await;
         agents.push(ThreadSafeAgentState::new(agent, provider, model, max_failures));
     }
 
     /// 获取有效代理数量
-    pub fn len(&self) -> usize {
-        let agents = self.agents.lock().unwrap();
+    pub async fn len(&self) -> usize {
+        let agents = self.agents.lock().await;
         agents.iter().filter(|state| state.is_valid()).count()
+    }
+    
+    /// 从集合中获取一个随机有效代理
+    async fn get_random_valid_agent(agents:  &mut [ThreadSafeAgentState]) -> Option<&mut ThreadSafeAgentState> {
+        let valid_indices: Vec<usize> = agents
+            .iter()
+            .enumerate()
+            .filter(|(_, state)| state.is_valid())
+            .map(|(i, _)| i)
+            .collect();
+
+        if valid_indices.is_empty() {
+            return None;
+        }
+
+        let mut rng = rand::rng();
+        let random_index = rng.random_range(0..valid_indices.len());
+        let agent_index = valid_indices[random_index];
+        agents.get_mut(agent_index)
     }
 
     /// 获取总代理数量（包括无效的）
-    pub fn total_len(&self) -> usize {
-        let agents = self.agents.lock().unwrap();
+    pub async fn total_len(&self) -> usize {
+        let agents = self.agents.lock().await;
         agents.len()
     }
 
     /// 检查是否有有效代理
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub async fn is_empty(&self) -> bool {
+        self.len().await == 0
     }
-
-
-
-    /// 向随机有效代理发送消息
-    pub async fn prompt(
-        &self,
-        message: &str,
-    ) -> Result<String, RandAgentError> {
-        // 第一步：选择代理并获取其信息
-        let (agent_index, provider, model) = {
-            let agents = self.agents.lock().unwrap();
-
-            // 找到所有有效代理的索引
-            let valid_indices: Vec<usize> = agents
-                .iter()
-                .enumerate()
-                .filter(|(_, state)| state.is_valid())
-                .map(|(i, _)| i)
-                .collect();
-
-            if valid_indices.is_empty() {
-                return Err(RandAgentError::NoValidAgents);
-            }
-
-            // 随机选择一个有效代理
-            let mut rng = rand::rng();
-            let random_index = rng.random_range(0..valid_indices.len());
-            let agent_index = valid_indices[random_index];
-
-            // 获取代理信息
-            let agent_state = &agents[agent_index];
-            let provider = agent_state.provider.clone();
-            let model = agent_state.model.clone();
-
-            (agent_index, provider, model)
-        };
-
-        // 打印使用的 provider 和 model
-        tracing::info!("Using provider: {}, model: {}", provider, model);
-
-        // 第二步：执行异步操作（在锁外执行）
-        let result = {
-            // 获取代理的 Arc 克隆以避免在异步操作中持有锁
-            let agent = {
-                let agents = self.agents.lock().unwrap();
-                Arc::clone(&agents[agent_index].agent)
-            };
-
-            // 在锁外执行异步操作
-            agent.prompt(message).await.map_err(|e| RandAgentError::AgentError(Box::new(e)))
-        };
-
-        // 第三步：根据结果更新失败计数
-        match &result {
-            Ok(_) => {
-                let mut agents = self.agents.lock().unwrap();
-                agents[agent_index].record_success();
-            }
-            Err(_) => {
-                let mut agents = self.agents.lock().unwrap();
-                agents[agent_index].record_failure();
-            }
-        }
-
-        result
-    }
-
+    
     /// 获取所有代理（用于调试或检查）
-    pub fn agents(&self) -> Vec<(String, String, u32, u32)> {
-        let agents = self.agents.lock().unwrap();
+    pub async fn agents(&self) -> Vec<(String, String, u32, u32)> {
+        let agents = self.agents.lock().await;
         agents
             .iter()
             .map(|state| (
@@ -221,8 +202,8 @@ impl ThreadSafeRandAgent {
     }
 
     /// 获取失败统计
-    pub fn failure_stats(&self) -> Vec<(usize, u32, u32)> {
-        let agents = self.agents.lock().unwrap();
+    pub async fn failure_stats(&self) -> Vec<(usize, u32, u32)> {
+        let agents = self.agents.lock().await;
         agents
             .iter()
             .enumerate()
@@ -231,18 +212,13 @@ impl ThreadSafeRandAgent {
     }
 
     /// 重置所有代理的失败计数
-    pub fn reset_failures(&self) {
-        let mut agents = self.agents.lock().unwrap();
+    pub async fn reset_failures(&self) {
+        let mut agents = self.agents.lock().await;
         for state in agents.iter_mut() {
             state.failure_count = 0;
         }
     }
 }
-
-// 实现 Send + Sync trait
-unsafe impl Send for ThreadSafeRandAgent {}
-unsafe impl Sync for ThreadSafeRandAgent {}
-
 
 /// 线程安全 RandAgent 的构建器
 pub struct ThreadSafeRandAgentBuilder {

@@ -107,11 +107,23 @@ impl Prompt for RandAgent<'_> {
         let mut agents = self.agents.lock().await;
         let agent_state = Self::get_random_valid_agent(&mut agents)
             .await
-            .ok_or(RandAgentError::NoValidAgents).unwrap();
+            .ok_or(PromptError::MaxDepthError {
+                max_depth: 0,
+                chat_history: vec![],
+                prompt: "没有有效agent".into(),
+            })?;
 
         tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
-        let content = agent_state.agent.prompt(prompt).await?;
-        Ok(content)
+        match agent_state.agent.prompt(prompt).await {
+            Ok(content) => {
+                agent_state.record_success();
+                Ok(content)
+            }
+            Err(e) => {
+                agent_state.record_failure();
+                Err(e)
+            }
+        }
     }
 }
 
