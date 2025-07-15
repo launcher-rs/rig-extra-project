@@ -1,15 +1,17 @@
-use rig_extra::error::RandAgentError;
 use rig_extra::extra_providers::{bigmodel};
 use std::sync::Arc;
 use config::Config;
 use serde::Deserialize;
 use tokio::task;
 use rig_extra::client::completion::CompletionClientDyn;
+use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::providers::{ollama, openai};
+use rig_extra::streaming::{stream_to_stdout, StreamingPrompt};
 use rig_extra::thread_safe_rand_agent::ThreadSafeRandAgentBuilder;
 
 #[derive(Debug, Deserialize)]
 struct AgentConfig {
+    id: i32,
     provider: String,
     model_name: String,
     api_key: String,
@@ -17,7 +19,7 @@ struct AgentConfig {
 }
 
 #[tokio::main]
-async fn main() -> Result<(),RandAgentError> {
+async fn main() -> anyhow::Result<()> {
     // 设置日志
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -40,7 +42,11 @@ async fn main() -> Result<(),RandAgentError> {
         .unwrap_or_default();
 
     // 创建线程安全的 RandAgent
-    let mut rand_agent_builder = ThreadSafeRandAgentBuilder::new().max_failures(5);
+    let mut rand_agent_builder = ThreadSafeRandAgentBuilder::new()
+        .max_failures(5)
+        .on_agent_invalid(|id|{
+            println!("Invalid agent id: {id}");
+        });
     for agent_conf in agent_configs {
         match agent_conf.provider.as_str() {
             "bigmodel" => {
@@ -49,7 +55,7 @@ async fn main() -> Result<(),RandAgentError> {
                     .agent(&agent_conf.model_name)
                     .build();
 
-                rand_agent_builder = rand_agent_builder.add_builder(agent,"bigmodel",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent,agent_conf.id,"bigmodel",&agent_conf.model_name);
             },
             "openai" => {
                 let client = if let Some(api_base_url) = agent_conf.api_base_url {
@@ -58,7 +64,7 @@ async fn main() -> Result<(),RandAgentError> {
                     openai::Client::new(&agent_conf.api_key)
                 };
                 let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,"openai",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,"openai",&agent_conf.model_name);
             },
             "ollama" => {
                 let client = if let Some(api_base_url) = agent_conf.api_base_url {
@@ -67,7 +73,7 @@ async fn main() -> Result<(),RandAgentError> {
                     ollama::Client::new()
                 };
                 let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,"ollama",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,    "ollama",&agent_conf.model_name);
             }
             other => {
                 println!("[WARN] provider '{other}' 暂未支持, 跳过该agent");
@@ -78,23 +84,23 @@ async fn main() -> Result<(),RandAgentError> {
 
 
 
-    println!("创建了线程安全的 RandAgent，总代理数量: {}", thread_safe_agent.total_len());
-    println!("有效代理数量: {}", thread_safe_agent.len());
+    println!("创建了线程安全的 RandAgent，总代理数量: {}", thread_safe_agent.total_len().await);
+    println!("有效代理数量: {}", thread_safe_agent.len().await);
 
     // 将线程安全代理包装在 Arc 中以支持多线程共享
     let agent_arc = Arc::new(thread_safe_agent);
 
     // 创建多个并发任务
     let mut handles = vec![];
-    let num_tasks = 5;
+    let num_tasks = 2;
 
     println!("\n开始并发执行 {num_tasks} 个任务...");
 
     for i in 0..num_tasks {
         let agent_clone = Arc::clone(&agent_arc);
-        let handle: task::JoinHandle<Result<String, RandAgentError>> = task::spawn(async move {
+        let handle: task::JoinHandle<Result<String, PromptError>> = task::spawn(async move {
             let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
-            
+            // let prompt = "将一个笑话".to_string();
             let result = agent_clone.prompt(&prompt).await?;
             Ok(result)
         });
@@ -107,9 +113,9 @@ async fn main() -> Result<(),RandAgentError> {
     
     for (i, handle) in handles.into_iter().enumerate() {
         match handle.await {
-            Ok(Ok(_response)) => {
+            Ok(Ok(response)) => {
                 success_count += 1;
-                println!("任务 {} 完成", i + 1);
+                println!("任务 {} 完成: {}", i + 1,response);
             }
             Ok(Err(e)) => {
                 error_count += 1;
@@ -121,6 +127,23 @@ async fn main() -> Result<(),RandAgentError> {
             }
         }
     }
+    
+    // 同步调用
+    for i in 0..10{
+        let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
+        // let prompt = "将一个笑话".to_string();
+        match  agent_arc.prompt(&prompt).await{
+            Ok(result) => {
+                println!("result: {result}");
+            }
+            Err(err) => {
+                println!("error: {err}");
+            }
+        }
+        
+    }
+    
+    
 
     println!("\n=== 执行结果统计 ===");
     println!("成功任务数: {success_count}");
@@ -129,10 +152,10 @@ async fn main() -> Result<(),RandAgentError> {
 
     // 显示最终状态
     println!("\n=== 最终状态 ===");
-    println!("总代理数量: {}", agent_arc.total_len());
-    println!("有效代理数量: {}", agent_arc.len());
+    println!("总代理数量: {}", agent_arc.total_len().await);
+    println!("有效代理数量: {}", agent_arc.len().await);
     
-    let stats = agent_arc.failure_stats();
+    let stats = agent_arc.failure_stats().await;
     println!("失败统计:");
     for (index, failures, max_failures) in stats {
         let status = if failures >= max_failures { "无效" } else { "有效" };
@@ -140,8 +163,22 @@ async fn main() -> Result<(),RandAgentError> {
     }
 
     // 重置失败计数
-    agent_arc.reset_failures();
+    agent_arc.reset_failures().await;
     println!("已重置所有代理的失败计数");
+    
+    // 异步调用
+    if let Some(agent) = agent_arc.get_random_valid_agent_state().await{
+        let agent = agent.agent.clone();
+        match  agent.stream_prompt("写一个故事").await{
+            Ok(mut stream) => {
+                stream_to_stdout(&agent, &mut stream).await?;
+            }
+            Err(err) => {
+                println!("error: {err}");
+            }
+        }
+    }
+    
 
     Ok(())
 } 
