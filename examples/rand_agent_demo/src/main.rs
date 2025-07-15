@@ -3,6 +3,7 @@ use config::Config;
 use serde::{Deserialize, Serialize};
 use rig_extra::providers::{ollama, openai};
 use rig_extra::client::completion::CompletionClientDyn;
+use rig_extra::completion::Prompt;
 use rig_extra::rand_agent::RandAgentBuilder;
 use rig_extra::error::RandAgentError;
 
@@ -33,6 +34,7 @@ pub enum ProviderEnum{
 
 #[derive(Debug, Deserialize)]
 struct AgentConfig {
+    id: i32,
     provider: ProviderEnum,
     model_name: String,
     api_key: String,
@@ -69,7 +71,7 @@ async fn main() -> Result<(), RandAgentError> {
                     openai::Client::new(&agent_conf.api_key)
                 };
                 let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,"openai",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,"openai",&agent_conf.model_name);
             }
             ProviderEnum::OpenRouter => {}
             ProviderEnum::DeepSeek => {}
@@ -81,7 +83,7 @@ async fn main() -> Result<(), RandAgentError> {
                     ollama::Client::new()
                 };
                 let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,"ollama",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,"ollama",&agent_conf.model_name);
             }
             ProviderEnum::Bigmodel => {
                 let client = bigmodel::Client::new(&agent_conf.api_key);
@@ -89,7 +91,7 @@ async fn main() -> Result<(), RandAgentError> {
                     .agent(&agent_conf.model_name)
                     .build();
 
-                rand_agent_builder = rand_agent_builder.add_builder(agent,"bigmodel",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent,agent_conf.id,"bigmodel",&agent_conf.model_name);
             },
             _ =>{
                 println!("[WARN] provider {:?} 暂未支持, 跳过该agent",&agent_conf.provider);

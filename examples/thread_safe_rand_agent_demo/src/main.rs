@@ -11,6 +11,7 @@ use rig_extra::thread_safe_rand_agent::ThreadSafeRandAgentBuilder;
 
 #[derive(Debug, Deserialize)]
 struct AgentConfig {
+    id: i32,
     provider: String,
     model_name: String,
     api_key: String,
@@ -50,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
                     .agent(&agent_conf.model_name)
                     .build();
 
-                rand_agent_builder = rand_agent_builder.add_builder(agent,"bigmodel",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent,agent_conf.id,"bigmodel",&agent_conf.model_name);
             },
             "openai" => {
                 let client = if let Some(api_base_url) = agent_conf.api_base_url {
@@ -59,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
                     openai::Client::new(&agent_conf.api_key)
                 };
                 let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,"openai",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,"openai",&agent_conf.model_name);
             },
             "ollama" => {
                 let client = if let Some(api_base_url) = agent_conf.api_base_url {
@@ -68,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
                     ollama::Client::new()
                 };
                 let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,"ollama",&agent_conf.model_name);
+                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,    "ollama",&agent_conf.model_name);
             }
             other => {
                 println!("[WARN] provider '{other}' 暂未支持, 跳过该agent");

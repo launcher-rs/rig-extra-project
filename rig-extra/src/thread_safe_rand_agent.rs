@@ -20,8 +20,8 @@
 //!
 //!     let thread_safe_agent = ThreadSafeRandAgentBuilder::new()
 //!         .max_failures(3)
-//!         .add_agent(client1.agent("glm-4-flash").build(), "bigmodel".to_string(), "glm-4-flash".to_string())
-//!         .add_agent(client2.agent("glm-4-flash").build(), "bigmodel".to_string(), "glm-4-flash".to_string())
+//!         .add_agent(client1.agent("glm-4-flash").build(),1, "bigmodel".to_string(), "glm-4-flash".to_string())
+//!         .add_agent(client2.agent("glm-4-flash").build(),2, "bigmodel".to_string(), "glm-4-flash".to_string())
 //!         .build();
 //!
 //!     let agent_arc = Arc::new(thread_safe_agent);
@@ -55,16 +55,21 @@ use rig::client::completion::CompletionModelHandle;
 use rig::completion::{Message, Prompt, PromptError};
 use tokio::sync::Mutex;
 
+/// 代理失效回调类型，减少类型复杂度
+pub type OnAgentInvalidCallback = Option<Arc<Box<dyn Fn(i32) + Send + Sync + 'static>>>;
+
 /// 推荐使用 ThreadSafeRandAgent，不推荐使用 RandAgent。
 /// RandAgent 已不再维护，ThreadSafeRandAgent 支持多线程并发访问且更安全。
 /// 线程安全的 RandAgent，支持多线程并发访问
 pub struct ThreadSafeRandAgent {
     agents: Arc<Mutex<Vec<ThreadSafeAgentState>>>,
+    on_agent_invalid: OnAgentInvalidCallback,
 }
 
 /// 线程安全的 Agent 状态
 #[derive(Clone)]
 pub struct ThreadSafeAgentState {
+    pub id: i32,
     pub agent: Arc<BoxAgent<'static>>,
     pub provider: String,
     pub model: String,
@@ -93,6 +98,11 @@ impl Prompt for ThreadSafeRandAgent {
             }
             Err(e) => {
                 agent_state.record_failure();
+                if !agent_state.is_valid() {
+                    if let Some(cb) = &self.on_agent_invalid {
+                        cb(agent_state.id);
+                    }
+                }
                 Err(e)
             }
         }
@@ -100,8 +110,9 @@ impl Prompt for ThreadSafeRandAgent {
 }
 
 impl ThreadSafeAgentState {
-    fn new(agent: BoxAgent<'static>, provider: String, model: String, max_failures: u32) -> Self {
+    fn new(agent: BoxAgent<'static>,id: i32, provider: String, model: String, max_failures: u32) -> Self {
         Self {
+            id,
             agent: Arc::new(agent),
             provider,
             model,
@@ -125,31 +136,49 @@ impl ThreadSafeAgentState {
 
 impl ThreadSafeRandAgent {
     /// 创建新的线程安全 RandAgent
-    pub fn new(agents: Vec<(BoxAgent<'static>, String, String)>) -> Self {
-        Self::with_max_failures(agents, 3)
+    pub fn new(agents: Vec<(BoxAgent<'static>, i32, String, String)>) -> Self {
+        Self::with_max_failures_and_callback(agents, 3, None)
     }
 
-    /// 使用自定义最大失败次数创建线程安全 RandAgent
-    pub fn with_max_failures(agents: Vec<(BoxAgent<'static>, String, String)>, max_failures: u32) -> Self {
+    /// 使用自定义最大失败次数和回调创建线程安全 RandAgent
+    pub fn with_max_failures_and_callback(
+        agents: Vec<(BoxAgent<'static>, i32, String, String)>,
+        max_failures: u32,
+        on_agent_invalid: OnAgentInvalidCallback,
+    ) -> Self {
         let agent_states = agents
             .into_iter()
-            .map(|(agent, provider, model)| ThreadSafeAgentState::new(agent, provider, model, max_failures))
+            .map(|(agent, id, provider, model)| ThreadSafeAgentState::new(agent, id, provider, model, max_failures))
             .collect();
         Self {
             agents: Arc::new(Mutex::new(agent_states)),
+            on_agent_invalid,
         }
     }
 
+    /// 使用自定义最大失败次数创建线程安全 RandAgent
+    pub fn with_max_failures(agents: Vec<(BoxAgent<'static>, i32, String, String)>, max_failures: u32) -> Self {
+        Self::with_max_failures_and_callback(agents, max_failures, None)
+    }
+
+    /// 设置 agent 失效时的回调
+    pub fn set_on_agent_invalid<F>(&mut self, callback: F)
+    where
+        F: Fn(i32) + Send + Sync + 'static,
+    {
+        self.on_agent_invalid = Some(Arc::new(Box::new(callback)));
+    }
+
     /// 添加代理到集合中
-    pub async fn add_agent(&self, agent: BoxAgent<'static>, provider: String, model: String) {
+    pub async fn add_agent(&self, agent: BoxAgent<'static>, id: i32, provider: String, model: String) {
         let mut agents = self.agents.lock().await;
-        agents.push(ThreadSafeAgentState::new(agent, provider, model, 3));
+        agents.push(ThreadSafeAgentState::new(agent, id, provider, model, 3));
     }
 
     /// 使用自定义最大失败次数添加代理
-    pub async fn add_agent_with_max_failures(&self, agent: BoxAgent<'static>, provider: String, model: String, max_failures: u32) {
+    pub async fn add_agent_with_max_failures(&self, agent: BoxAgent<'static>, id: i32, provider: String, model: String, max_failures: u32) {
         let mut agents = self.agents.lock().await;
-        agents.push(ThreadSafeAgentState::new(agent, provider, model, max_failures));
+        agents.push(ThreadSafeAgentState::new(agent, id, provider, model, max_failures));
     }
 
     /// 获取有效代理数量
@@ -178,6 +207,7 @@ impl ThreadSafeRandAgent {
         let agent_index = valid_indices[random_index];
         agents.get_mut(agent_index).cloned()
     }
+    
 
     /// 获取总代理数量（包括无效的）
     pub async fn total_len(&self) -> usize {
@@ -225,8 +255,9 @@ impl ThreadSafeRandAgent {
 
 /// 线程安全 RandAgent 的构建器
 pub struct ThreadSafeRandAgentBuilder {
-    agents: Vec<(BoxAgent<'static>, String, String)>,
+    agents: Vec<(BoxAgent<'static>, i32, String, String)>,
     max_failures: u32,
+    on_agent_invalid: OnAgentInvalidCallback,
 }
 
 impl ThreadSafeRandAgentBuilder {
@@ -235,6 +266,7 @@ impl ThreadSafeRandAgentBuilder {
         Self {
             agents: Vec::new(),
             max_failures: 3, // 默认最大失败次数
+            on_agent_invalid: None,
         }
     }
 
@@ -244,14 +276,23 @@ impl ThreadSafeRandAgentBuilder {
         self
     }
 
+    /// 设置 agent 失效时的回调
+    pub fn on_agent_invalid<F>(mut self, callback: F) -> Self
+    where
+        F: Fn(i32) + Send + Sync + 'static,
+    {
+        self.on_agent_invalid = Some(Arc::new(Box::new(callback)));
+        self
+    }
+
     /// 添加代理到构建器
     ///
     /// # 参数
     /// - agent: 代理实例（需要是 'static 生命周期）
     /// - provider_name: 提供方名称（如 openai、bigmodel 等）
     /// - model_name: 模型名称（如 gpt-3.5、glm-4-flash 等）
-    pub fn add_agent(mut self, agent: BoxAgent<'static>, provider_name: String, model_name: String) -> Self {
-        self.agents.push((agent, provider_name, model_name));
+    pub fn add_agent(mut self, agent: BoxAgent<'static>, id: i32, provider_name: String, model_name: String) -> Self {
+        self.agents.push((agent, id, provider_name, model_name));
         self
     }
 
@@ -261,14 +302,14 @@ impl ThreadSafeRandAgentBuilder {
     /// - builder: AgentBuilder 实例（需要是 'static 生命周期）
     /// - provider_name: 提供方名称（如 openai、bigmodel 等）
     /// - model_name: 模型名称（如 gpt-3.5、glm-4-flash 等）
-    pub fn add_builder(mut self, builder: Agent<CompletionModelHandle<'static>>, provider_name: &str, model_name: &str) -> Self {
-        self.agents.push((builder, provider_name.to_string(), model_name.to_string()));
+    pub fn add_builder(mut self, builder: Agent<CompletionModelHandle<'static>>, id: i32, provider_name: &str, model_name: &str) -> Self {
+        self.agents.push((builder, id, provider_name.to_string(), model_name.to_string()));
         self
     }
 
     /// 构建 ThreadSafeRandAgent
     pub fn build(self) -> ThreadSafeRandAgent {
-        ThreadSafeRandAgent::with_max_failures(self.agents, self.max_failures)
+        ThreadSafeRandAgent::with_max_failures_and_callback(self.agents, self.max_failures, self.on_agent_invalid)
     }
 }
 
