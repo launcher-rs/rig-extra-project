@@ -42,7 +42,11 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_default();
 
     // 创建线程安全的 RandAgent
-    let mut rand_agent_builder = ThreadSafeRandAgentBuilder::new().max_failures(5);
+    let mut rand_agent_builder = ThreadSafeRandAgentBuilder::new()
+        .max_failures(5)
+        .on_agent_invalid(|id|{
+            println!("Invalid agent id: {}", id);
+        });
     for agent_conf in agent_configs {
         match agent_conf.provider.as_str() {
             "bigmodel" => {
@@ -123,6 +127,23 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+    
+    // 同步调用
+    for i in 0..10{
+        let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
+        // let prompt = "将一个笑话".to_string();
+        match  agent_arc.prompt(&prompt).await{
+            Ok(result) => {
+                println!("result: {result}");
+            }
+            Err(err) => {
+                println!("error: {err}");
+            }
+        }
+        
+    }
+    
+    
 
     println!("\n=== 执行结果统计 ===");
     println!("成功任务数: {success_count}");
@@ -148,8 +169,14 @@ async fn main() -> anyhow::Result<()> {
     // 异步调用
     if let Some(agent) = agent_arc.get_random_valid_agent_state().await{
         let agent = agent.agent.clone();
-        let mut stream = agent.stream_prompt("写一个故事").await?;
-        stream_to_stdout(&agent, &mut stream).await?;
+        match  agent.stream_prompt("写一个故事").await{
+            Ok(mut stream) => {
+                stream_to_stdout(&agent, &mut stream).await?;
+            }
+            Err(err) => {
+                println!("error: {err}");
+            }
+        }
     }
     
 

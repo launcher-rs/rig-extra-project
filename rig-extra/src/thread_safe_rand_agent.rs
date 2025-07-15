@@ -80,16 +80,18 @@ pub struct ThreadSafeAgentState {
 impl Prompt for ThreadSafeRandAgent {
     #[allow(refining_impl_trait)]
     async fn prompt(&self, prompt: impl Into<Message> + Send) -> Result<String, PromptError> {
-        // 第一步：选择代理并获取其信息
-        let mut agent_state = self.get_random_valid_agent_state()
-            .await
+        // 第一步：选择代理并获取其索引
+        let agent_index = self.get_random_valid_agent_index().await
             .ok_or(PromptError::MaxDepthError {
                 max_depth: 0,
                 chat_history: vec![],
                 prompt: "没有有效agent".into(),
             })?;
 
-        // 第二步：执行异步操作
+        // 第二步：加锁并获取可变引用
+        let mut agents = self.agents.lock().await;
+        let agent_state = &mut agents[agent_index];
+
         tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
         match agent_state.agent.prompt(prompt).await {
             Ok(content) => {
@@ -187,7 +189,27 @@ impl ThreadSafeRandAgent {
         agents.iter().filter(|state| state.is_valid()).count()
     }
     
+    /// 从集合中获取一个随机有效代理的索引
+    pub async fn get_random_valid_agent_index(&self) -> Option<usize> {
+        let agents = self.agents.lock().await;
+        let valid_indices: Vec<usize> = agents
+            .iter()
+            .enumerate()
+            .filter(|(_, state)| state.is_valid())
+            .map(|(i, _)| i)
+            .collect();
+
+        if valid_indices.is_empty() {
+            return None;
+        }
+
+        let mut rng = rand::rng();
+        let random_index = rng.random_range(0..valid_indices.len());
+        Some(valid_indices[random_index])
+    }
+
     /// 从集合中获取一个随机有效代理
+    /// 注意: 并不会增加失败计数
     pub async fn get_random_valid_agent_state(&self) -> Option<ThreadSafeAgentState> {
         let mut agents = self.agents.lock().await;
 

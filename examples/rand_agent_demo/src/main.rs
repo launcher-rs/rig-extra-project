@@ -59,7 +59,11 @@ async fn main() -> Result<(), RandAgentError> {
         })
         .unwrap_or_default();
     
-    let mut rand_agent_builder = RandAgentBuilder::new().max_failures(5);
+    let mut rand_agent_builder = RandAgentBuilder::new()
+        .max_failures(5)
+        .on_agent_invalid(|id|{
+        println!("Invalid agent id: {}", id);
+    });
 
     for agent_conf in agent_configs {
         match agent_conf.provider {
@@ -104,7 +108,7 @@ async fn main() -> Result<(), RandAgentError> {
     println!("Valid agents: {}", rand_agent.len().await);
 
     // 多次调用，每次都会随机选择一个有效代理
-    for i in 1..=5 {
+    for i in 1..=20 {
         println!("\n--- 调用 #{i} ---");
 
         match rand_agent.prompt("请将一个笑话").await {
