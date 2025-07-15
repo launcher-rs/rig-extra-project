@@ -2,8 +2,8 @@ use rig::completion::{CompletionError, CompletionRequest};
 use rig::extractor::ExtractorBuilder;
 use rig::message::{MessageError, Text};
 use rig::providers::openai;
-use rig::{OneOrMany, completion, message};
-use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient};
+use rig::{OneOrMany, completion, message, client};
+use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient, ProviderValue};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -76,6 +76,16 @@ impl ProviderClient for Client {
         Self: Sized
     {
         let api_key = std::env::var("BIGMODEL_API_KEY").expect("BIGMODEL_KEY not set");
+        Self::new(&api_key)
+    }
+
+    fn from_val(input: ProviderValue) -> Self
+    where
+        Self: Sized
+    {
+        let  client::ProviderValue::Simple(api_key) = input else {
+            panic!("Incorrect provider value type")
+        };
         Self::new(&api_key)
     }
 }
@@ -342,31 +352,31 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
                             "Response contained no message or tool call (empty)".to_owned(),
                         )
                     })?;
-                    // let usage = completion::Usage {
-                    //     input_tokens: response.usage.prompt_tokens as u64,
-                    //     output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
-                    //         as u64,
-                    //     total_tokens: response.usage.total_tokens as u64,
-                    // };
+                    let usage = completion::Usage {
+                        input_tokens: response.usage.prompt_tokens as u64,
+                        output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
+                            as u64,
+                        total_tokens: response.usage.total_tokens as u64,
+                    };
                     tracing::debug!("response choices: {:?}: ", choice);
                     Ok(completion::CompletionResponse {
                         choice,
-                        // usage,
+                        usage,
                         raw_response: response,
                     })
                 } else {
                     let choice = OneOrMany::one(message::AssistantContent::Text(Text {
                         text: content.clone().unwrap_or_else(|| "".to_owned()),
                     }));
-                    // let usage = completion::Usage {
-                    //     input_tokens: response.usage.prompt_tokens as u64,
-                    //     output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
-                    //         as u64,
-                    //     total_tokens: response.usage.total_tokens as u64,
-                    // };
+                    let usage = completion::Usage {
+                        input_tokens: response.usage.prompt_tokens as u64,
+                        output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
+                            as u64,
+                        total_tokens: response.usage.total_tokens as u64,
+                    };
                     Ok(completion::CompletionResponse {
                         choice,
-                        // usage,
+                        usage,
                         raw_response: response,
                     })
                 }

@@ -62,7 +62,7 @@ async fn main() -> Result<(), RandAgentError> {
     let mut rand_agent_builder = RandAgentBuilder::new()
         .max_failures(5)
         .on_agent_invalid(|id|{
-        println!("Invalid agent id: {}", id);
+        println!("Invalid agent id: {id}");
     });
 
     for agent_conf in agent_configs {

@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
     let mut rand_agent_builder = ThreadSafeRandAgentBuilder::new()
         .max_failures(5)
         .on_agent_invalid(|id|{
-            println!("Invalid agent id: {}", id);
+            println!("Invalid agent id: {id}");
         });
     for agent_conf in agent_configs {
         match agent_conf.provider.as_str() {
