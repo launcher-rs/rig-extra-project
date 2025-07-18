@@ -277,7 +277,7 @@ impl ThreadSafeRandAgent {
 
 /// 线程安全 RandAgent 的构建器
 pub struct ThreadSafeRandAgentBuilder {
-    agents: Vec<(BoxAgent<'static>, i32, String, String)>,
+    pub(crate) agents: Vec<(BoxAgent<'static>, i32, String, String)>,
     max_failures: u32,
     on_agent_invalid: OnAgentInvalidCallback,
 }
@@ -333,6 +333,7 @@ impl ThreadSafeRandAgentBuilder {
     pub fn build(self) -> ThreadSafeRandAgent {
         ThreadSafeRandAgent::with_max_failures_and_callback(self.agents, self.max_failures, self.on_agent_invalid)
     }
+    
 }
 
 impl Default for ThreadSafeRandAgentBuilder {

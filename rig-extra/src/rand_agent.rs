@@ -242,7 +242,7 @@ impl<'a> RandAgent<'a> {
 
 /// 用于创建 RandAgent 实例的构建器
 pub struct RandAgentBuilder<'a> {
-    agents: Vec<(BoxAgent<'a>, i32, String, String)>,
+    pub(crate) agents: Vec<(BoxAgent<'a>, i32, String, String)>,
     max_failures: u32,
     on_agent_invalid: Option<Box<dyn Fn(i32) + Send + Sync + 'static>>,
 }

@@ -1,22 +1,10 @@
-use rig_extra::extra_providers::{bigmodel};
 use std::sync::Arc;
 use config::Config;
-use serde::Deserialize;
 use tokio::task;
-use rig_extra::client::completion::CompletionClientDyn;
 use rig_extra::completion::{Prompt, PromptError};
-use rig_extra::providers::{ollama, openai};
+use rig_extra::simple_rand_builder::AgentConfig;
 use rig_extra::streaming::{stream_to_stdout, StreamingPrompt};
 use rig_extra::thread_safe_rand_agent::ThreadSafeRandAgentBuilder;
-
-#[derive(Debug, Deserialize)]
-struct AgentConfig {
-    id: i32,
-    provider: String,
-    model_name: String,
-    api_key: String,
-    api_base_url: Option<String>,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -42,44 +30,12 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_default();
 
     // 创建线程安全的 RandAgent
-    let mut rand_agent_builder = ThreadSafeRandAgentBuilder::new()
+    let rand_agent_builder = ThreadSafeRandAgentBuilder::new()
         .max_failures(5)
         .on_agent_invalid(|id|{
             println!("Invalid agent id: {id}");
         });
-    for agent_conf in agent_configs {
-        match agent_conf.provider.as_str() {
-            "bigmodel" => {
-                let client = bigmodel::Client::new(&agent_conf.api_key);
-                let agent = client
-                    .agent(&agent_conf.model_name)
-                    .build();
-
-                rand_agent_builder = rand_agent_builder.add_builder(agent,agent_conf.id,"bigmodel",&agent_conf.model_name);
-            },
-            "openai" => {
-                let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                    openai::Client::from_url(&agent_conf.api_key,&api_base_url)
-                }else {
-                    openai::Client::new(&agent_conf.api_key)
-                };
-                let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,"openai",&agent_conf.model_name);
-            },
-            "ollama" => {
-                let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                    ollama::Client::from_url(&api_base_url)
-                }else {
-                    ollama::Client::new()
-                };
-                let agent_builder = client.agent(&agent_conf.model_name).build();
-                rand_agent_builder = rand_agent_builder.add_builder(agent_builder,agent_conf.id,    "ollama",&agent_conf.model_name);
-            }
-            other => {
-                println!("[WARN] provider '{other}' 暂未支持, 跳过该agent");
-            }
-        }
-    }
+    let rand_agent_builder = rand_agent_builder.simple_builder(agent_configs,"You are a helpful assistant".to_string());
     let thread_safe_agent = rand_agent_builder.build();
 
 

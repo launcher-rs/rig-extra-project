@@ -437,7 +437,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f87546d9c837f0b7557e47b8bd6eae52c3c223141b76aa233c345c9ab41d9117"
 dependencies = [
  "deluxe-core",
- "heck",
+ "heck 0.4.1",
  "if_chain",
  "proc-macro-crate",
  "proc-macro2",
@@ -793,6 +793,12 @@ name = "heck"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
+
+[[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "http"
@@ -2013,7 +2019,7 @@ dependencies = [
 
 [[package]]
 name = "rig-extra"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "rand 0.9.1",
  "reqwest",
@@ -2021,6 +2027,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "strum_macros",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -2423,6 +2430,19 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "strum_macros"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77a8c5abcaf0f9ce05d62342b7d298c346515365c36b673df4ebe3ced01fde8"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
 
 [[package]]
 name = "subtle"
