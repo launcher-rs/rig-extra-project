@@ -54,6 +54,7 @@ use rig::client::builder::BoxAgent;
 use rig::client::completion::CompletionModelHandle;
 use rig::completion::{Message, Prompt, PromptError};
 use tokio::sync::Mutex;
+use crate::AgentInfo;
 
 /// 代理失效回调类型，减少类型复杂度
 pub type OnAgentInvalidCallback = Option<Arc<Box<dyn Fn(i32) + Send + Sync + 'static>>>;
@@ -71,10 +72,7 @@ pub struct ThreadSafeRandAgent {
 pub struct ThreadSafeAgentState {
     pub id: i32,
     pub agent: Arc<BoxAgent<'static>>,
-    pub provider: String,
-    pub model: String,
-    pub failure_count: u32,
-    pub max_failures: u32,
+    pub info: AgentInfo,
 }
 
 impl Prompt for ThreadSafeRandAgent {
@@ -92,7 +90,7 @@ impl Prompt for ThreadSafeRandAgent {
         let mut agents = self.agents.lock().await;
         let agent_state = &mut agents[agent_index];
 
-        tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
+        tracing::info!("Using provider: {}, model: {}", agent_state.info.provider, agent_state.info.model);
         match agent_state.agent.prompt(prompt).await {
             Ok(content) => {
                 agent_state.record_success();
@@ -116,23 +114,26 @@ impl ThreadSafeAgentState {
         Self {
             id,
             agent: Arc::new(agent),
-            provider,
-            model,
-            failure_count: 0,
-            max_failures,
+            info: AgentInfo{
+                id,
+                provider,
+                model,
+                failure_count: 0,
+                max_failures,
+            }
         }
     }
 
     fn is_valid(&self) -> bool {
-        self.failure_count < self.max_failures
+        self.info.failure_count < self.info.max_failures
     }
 
     fn record_failure(&mut self) {
-        self.failure_count += 1;
+        self.info.failure_count += 1;
     }
 
     fn record_success(&mut self) {
-        self.failure_count = 0;
+        self.info.failure_count = 0;
     }
 }
 
@@ -243,17 +244,29 @@ impl ThreadSafeRandAgent {
     }
     
     /// 获取所有代理（用于调试或检查）
+    #[deprecated(since = "0.6.1", note = "Renamed to `get_agent_info`")]
     pub async fn agents(&self) -> Vec<(String, String, u32, u32)> {
         let agents = self.agents.lock().await;
         agents
             .iter()
             .map(|state| (
-                state.provider.clone(),
-                state.model.clone(),
-                state.failure_count,
-                state.max_failures
+                state.info.provider.clone(),
+                state.info.model.clone(),
+                state.info.failure_count,
+                state.info.max_failures
             ))
             .collect()
+    }
+
+    /// 获取agent info
+    pub async fn get_agents_info(&self) -> Vec<AgentInfo> {
+        let  agents = self.agents.lock().await;
+        let agent_infos = agents.iter()
+            .map(|agent|{
+                agent.info.clone()
+            }).collect::<_>();
+        tracing::info!("agents info: {:?}", agent_infos);
+        agent_infos
     }
 
     /// 获取失败统计
@@ -262,7 +275,7 @@ impl ThreadSafeRandAgent {
         agents
             .iter()
             .enumerate()
-            .map(|(i, state)| (i, state.failure_count, state.max_failures))
+            .map(|(i, state)| (i, state.info.failure_count, state.info.max_failures))
             .collect()
     }
 
@@ -270,8 +283,34 @@ impl ThreadSafeRandAgent {
     pub async fn reset_failures(&self) {
         let mut agents = self.agents.lock().await;
         for state in agents.iter_mut() {
-            state.failure_count = 0;
+            state.info.failure_count = 0;
         }
+    }
+
+    /// 通过名称获取 agent 
+    pub async fn get_agent_by_name(&self,provider_name: &str, model_name: &str) -> Option<ThreadSafeAgentState> {
+        let mut agents = self.agents.lock().await;
+
+        for agent in agents.iter_mut() {
+            if agent.info.provider == provider_name &&  agent.info.model == model_name {
+                return Some(agent.clone());
+            }
+        }
+
+        None
+    }   
+    
+    /// 通过id获取 agent 
+    pub async fn get_agent_by_id(&self,id:i32) -> Option<ThreadSafeAgentState> {
+        let mut agents = self.agents.lock().await;
+
+        for agent in agents.iter_mut() {
+            if agent.info.id == id {
+                return Some(agent.clone());
+            }
+        }
+
+        None
     }
 }
 

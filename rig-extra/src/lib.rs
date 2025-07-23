@@ -6,3 +6,16 @@ pub mod thread_safe_rand_agent;
 pub mod simple_rand_builder;
 
 pub use rig::*;
+
+#[derive(Debug,Clone)]
+pub struct AgentInfo{
+    pub id: i32,
+    /// 提供者
+    pub provider: String,
+    /// 模型名称
+    pub model: String,
+    /// 失败次数
+    pub failure_count: u32,
+    /// 最大失败次数
+    pub max_failures: u32,
+}

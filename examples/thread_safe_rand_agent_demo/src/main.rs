@@ -134,6 +134,19 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+
+    // 获取agents info
+    let agents_info = agent_arc.get_agents_info().await;
+    for info in agents_info {
+        println!("agent info : {:?}",info);
+    }
+
+    if let Some(bigmodel_agent) = agent_arc.get_agent_by_name("Bigmodel","glm-4-flash").await{
+        let result = bigmodel_agent.agent.prompt("将一个笑话").await?;
+        println!("bigmodel_agent result: {}",result);
+    }else {
+        println!("bigmodel_agent not found");
+    }
     
 
     Ok(())

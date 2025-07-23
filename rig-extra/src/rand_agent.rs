@@ -61,16 +61,13 @@ use rig::client::builder::BoxAgent;
 use rig::completion::{Message, Prompt, PromptError};
 use rig::client::completion::CompletionModelHandle;
 use tokio::sync::Mutex;
-
+use crate::AgentInfo;
 
 /// Agent状态，包含agent实例和失败计数
 pub struct AgentState<'a> {
     id: i32,
     agent: BoxAgent<'a>,
-    provider: String,
-    model: String,
-    failure_count: u32,
-    max_failures: u32,
+    pub info: AgentInfo,
 }
 
 impl<'a> AgentState<'a> {
@@ -78,23 +75,26 @@ impl<'a> AgentState<'a> {
         Self {
             id,
             agent,
-            provider,
-            model,
-            failure_count: 0,
-            max_failures,
+            info: AgentInfo{
+                id,
+                provider,
+                model,
+                failure_count: 0,
+                max_failures,
+            }
         }
     }
 
     fn is_valid(&self) -> bool {
-        self.failure_count < self.max_failures
+        self.info.failure_count < self.info.max_failures
     }
 
     fn record_failure(&mut self) {
-        self.failure_count += 1;
+        self.info.failure_count += 1;
     }
 
     fn record_success(&mut self) {
-        self.failure_count = 0;
+        self.info.failure_count = 0;
     }
 }
 
@@ -102,6 +102,7 @@ impl<'a> AgentState<'a> {
 pub type OnRandAgentInvalidCallback = Option<Box<dyn Fn(i32) + Send + Sync + 'static>>;
 
 /// 包装多个代理的结构体，每次调用时随机选择一个代理
+#[deprecated(since = "0.7.0", note = "使用 `ThreadSafeRandAgent`")]
 pub struct RandAgent<'a> {
     agents: Mutex<Vec<AgentState<'a>>>,
     on_agent_invalid: OnRandAgentInvalidCallback,
@@ -119,7 +120,7 @@ impl Prompt for RandAgent<'_> {
                 prompt: "没有有效agent".into(),
             })?;
 
-        tracing::info!("Using provider: {}, model: {}", agent_state.provider, agent_state.model);
+        tracing::info!("Using provider: {}, model: {}", agent_state.info.provider, agent_state.info.model);
         match agent_state.agent.prompt(prompt).await {
             Ok(content) => {
                 agent_state.record_success();
@@ -226,14 +227,14 @@ impl<'a> RandAgent<'a> {
             .await
             .iter()
             .enumerate()
-            .map(|(i, state)| (i, state.failure_count, state.max_failures))
+            .map(|(i, state)| (i, state.info.failure_count, state.info.max_failures))
             .collect()
     }
 
     /// 重置所有代理的失败计数
     pub async fn reset_failures(&self) {
         for state in self.agents.lock().await.iter_mut() {
-            state.failure_count = 0;
+            state.info.failure_count = 0;
         }
     }
 }
