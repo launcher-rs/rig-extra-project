@@ -5,6 +5,7 @@ members = [
     "rig-extra",
     "examples/bigmodel_provider_demo",
     "examples/mcp_demo",
-    "examples/rand_agent_demo"
+    "examples/rand_agent_demo", 
+    "examples/retry_demo"
 ]
 

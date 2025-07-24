@@ -1,3 +1,4 @@
+use rig::completion::PromptError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -6,4 +7,6 @@ pub enum RandAgentError {
     NoValidAgents,
     #[error("Agent error: {0}")]
     AgentError(#[from] Box<dyn std::error::Error + Send + Sync>),
+    #[error("PromptError error: {0}")]
+    PromptError(#[from] PromptError),
 } 

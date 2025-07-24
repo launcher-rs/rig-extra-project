@@ -48,6 +48,8 @@
 //! ```
 
 use std::sync::Arc;
+use std::time::Duration;
+use backon::{Retryable, ExponentialBuilder};
 use rand::Rng;
 use rig::agent::Agent;
 use rig::client::builder::BoxAgent;
@@ -55,6 +57,7 @@ use rig::client::completion::CompletionModelHandle;
 use rig::completion::{Message, Prompt, PromptError};
 use tokio::sync::Mutex;
 use crate::AgentInfo;
+use crate::error::RandAgentError;
 
 /// 代理失效回调类型，减少类型复杂度
 pub type OnAgentInvalidCallback = Option<Arc<Box<dyn Fn(i32) + Send + Sync + 'static>>>;
@@ -62,6 +65,7 @@ pub type OnAgentInvalidCallback = Option<Arc<Box<dyn Fn(i32) + Send + Sync + 'st
 /// 推荐使用 RandAgent，不推荐使用 RandAgent。
 /// RandAgent 已不再维护，RandAgent 支持多线程并发访问且更安全。
 /// 线程安全的 RandAgent，支持多线程并发访问
+#[derive(Clone)]
 pub struct RandAgent {
     agents: Arc<Mutex<Vec<AgentState>>>,
     on_agent_invalid: OnAgentInvalidCallback,
@@ -90,7 +94,7 @@ impl Prompt for RandAgent {
         let mut agents = self.agents.lock().await;
         let agent_state = &mut agents[agent_index];
 
-        tracing::info!("Using provider: {}, model: {}", agent_state.info.provider, agent_state.info.model);
+        tracing::info!("Using provider: {}, model: {},id: {}", agent_state.info.provider, agent_state.info.model,agent_state.info.id);
         match agent_state.agent.prompt(prompt).await {
             Ok(content) => {
                 agent_state.record_success();
@@ -311,6 +315,31 @@ impl RandAgent {
         }
 
         None
+    }
+
+    /// 添加失败重试
+    pub async fn try_invoke_with_retry(&self, info: Message, retry_num: Option<usize>) -> Result<String, RandAgentError> {
+        let mut config = ExponentialBuilder::default();
+        if let Some(retry_num) = retry_num {
+            config = config.with_max_times(retry_num)
+        }
+
+        let info = Arc::new(info);
+
+        let content = (|| {
+            let agent = self.clone();
+            let prompt = info.clone();
+            async move {
+                agent.prompt((*prompt).clone()).await.map_err(|e| e)
+            }
+        })
+        .retry(config)
+        .sleep(tokio::time::sleep)
+        .notify(|err: &PromptError, dur: Duration| {
+            println!("retrying {:?} after {:?}", err, dur);
+        })
+        .await?;
+        Ok(content)
     }
 }
 

@@ -5,6 +5,8 @@ pub mod rand_agent;
 pub mod simple_rand_builder;
 
 pub use rig::*;
+/// 导出 backon 实现失败重试
+pub use backon::*;
 
 #[derive(Debug,Clone)]
 pub struct AgentInfo{
