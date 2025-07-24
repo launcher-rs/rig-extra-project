@@ -1999,9 +1999,8 @@ dependencies = [
 
 [[package]]
 name = "rig-core"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "969de7ef951d6fa1c5dfae35702ddcf5ed95eea2db0648b9a87849b92b86bfbc"
+version = "0.15.1"
+source = "git+https://github.com/0xPlaygrounds/rig.git?rev=5e8a9daf0d527423695a1b5d55879785100e49b5#5e8a9daf0d527423695a1b5d55879785100e49b5"
 dependencies = [
  "as-any",
  "async-stream",
@@ -2029,8 +2028,7 @@ dependencies = [
 [[package]]
 name = "rig-derive"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5951b694531054a1e1e4289f31f92b6c38df507f68ac76b3a4e83ebba9f5ac1c"
+source = "git+https://github.com/0xPlaygrounds/rig.git?rev=5e8a9daf0d527423695a1b5d55879785100e49b5#5e8a9daf0d527423695a1b5d55879785100e49b5"
 dependencies = [
  "convert_case 0.8.0",
  "deluxe",
@@ -2043,7 +2041,7 @@ dependencies = [
 
 [[package]]
 name = "rig-extra"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "backon",
  "rand 0.9.1",

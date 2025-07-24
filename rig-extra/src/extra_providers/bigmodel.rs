@@ -228,6 +228,7 @@ impl TryFrom<message::Message> for Message {
                     match ac {
                         message::AssistantContent::Text(message::Text { text }) => texts.push(text),
                         message::AssistantContent::ToolCall(tc) => tool_calls.push(tc.into()),
+                        _ => {}
                     }
                 }
 
