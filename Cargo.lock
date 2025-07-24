@@ -1814,16 +1814,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rand_agent_demo"
-version = "0.1.0"
-dependencies = [
- "config",
- "rig-extra",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "rand_chacha"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2019,7 +2009,7 @@ dependencies = [
 
 [[package]]
 name = "rig-extra"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
  "rand 0.9.1",
  "reqwest",
