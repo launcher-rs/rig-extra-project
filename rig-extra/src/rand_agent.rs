@@ -330,13 +330,13 @@ impl RandAgent {
             let agent = self.clone();
             let prompt = info.clone();
             async move {
-                agent.prompt((*prompt).clone()).await.map_err(|e| e)
+                agent.prompt((*prompt).clone()).await
             }
         })
         .retry(config)
         .sleep(tokio::time::sleep)
         .notify(|err: &PromptError, dur: Duration| {
-            println!("retrying {:?} after {:?}", err, dur);
+            println!("retrying {err:?} after {dur:?}");
         })
         .await?;
         Ok(content)

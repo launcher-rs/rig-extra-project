@@ -20,10 +20,10 @@ async fn main() -> anyhow::Result<()> {
     
     match agent.prompt("讲个笑话").await{
         Ok(result) => {
-            println!("result: {}", result);
+            println!("result: {result}");
         }
         Err(err) => {
-            println!("Error: {}", err);
+            println!("Error: {err}");
         }
     }
     
@@ -37,16 +37,16 @@ async fn main() -> anyhow::Result<()> {
     }).retry(ExponentialBuilder::default())
         .sleep(tokio::time::sleep)
         .notify(|err: &PromptError, dur: Duration| {
-            println!("retrying {:?} after {:?}", err, dur);
+            println!("retrying {err:?} after {dur:?}");
         })
         .await;
     
     match result {
         Ok(result) => {
-            println!("result: {}", result);
+            println!("result: {result}");
         }
         Err(err) => {
-            println!("Error: {}", err);
+            println!("Error: {err}");
         }
     }
     
@@ -65,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
     let thread_safe_agent = rand_agent_builder.build();
     println!("rand_agent 请求........");
     let result = thread_safe_agent.try_invoke_with_retry("讲个笑话".into(),Some(3)).await?;
-    println!("result: {}", result);
+    println!("result: {result}");
 
     Ok(())
 }
