@@ -13,7 +13,7 @@ license = "MIT"
 #rig-core = { version = "0.15.0",optional = true,default-features = false }
 rig-core = { git="https://github.com/0xPlaygrounds/rig.git",rev="5e8a9daf0d527423695a1b5d55879785100e49b5",optional = true,default-features = false }
 serde = { version = "1.0.217", features = ["derive"] }
-reqwest = "0.12.15"
+reqwest = { version = "0.12",default-features = false,optional = true,features = ["json", "stream", "multipart"]}
 serde_json = "1.0.135"
 tracing = "0.1.41"
 schemars = "0.8.22"
@@ -25,7 +25,7 @@ backon = "1.5.1"
 
 # 使用feature ,将 rig-core导入
 [features]
-default = ["rig-core/default"]
+default = ["rig-core/default","reqwest/default"]
 rig-all = ["rig-core/all"]
 rig-audio = ["rig-core/audio"]
 rig-image = ["rig-core/image"]
@@ -36,5 +36,5 @@ rig-rayon = ["rig-core/rayon"]
 rig-worker = ["rig-core/worker"]
 rig-mcp = ["rig-core/mcp"]
 rig-socks = ["rig-core/socks"]
-rig-reqwest-rustls = ["rig-core/reqwest-rustls"]
+rig-reqwest-rustls = ["rig-core/reqwest-rustls","reqwest/rustls-tls", "reqwest/charset", "reqwest/http2", "reqwest/macos-system-configuration"]
 
