@@ -2000,7 +2000,7 @@ dependencies = [
 [[package]]
 name = "rig-core"
 version = "0.15.1"
-source = "git+https://github.com/0xPlaygrounds/rig.git?rev=5e8a9daf0d527423695a1b5d55879785100e49b5#5e8a9daf0d527423695a1b5d55879785100e49b5"
+source = "git+https://github.com/0xPlaygrounds/rig.git?rev=dea917faa74627eea989c6e2c8a76335597dfdbc#dea917faa74627eea989c6e2c8a76335597dfdbc"
 dependencies = [
  "as-any",
  "async-stream",
@@ -2028,7 +2028,7 @@ dependencies = [
 [[package]]
 name = "rig-derive"
 version = "0.1.4"
-source = "git+https://github.com/0xPlaygrounds/rig.git?rev=5e8a9daf0d527423695a1b5d55879785100e49b5#5e8a9daf0d527423695a1b5d55879785100e49b5"
+source = "git+https://github.com/0xPlaygrounds/rig.git?rev=dea917faa74627eea989c6e2c8a76335597dfdbc#dea917faa74627eea989c6e2c8a76335597dfdbc"
 dependencies = [
  "convert_case 0.8.0",
  "deluxe",
