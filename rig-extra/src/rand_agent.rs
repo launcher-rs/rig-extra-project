@@ -328,7 +328,7 @@ impl RandAgent {
     }
 
     #[allow(refining_impl_trait)]
-    async fn prompt_with_info(&self, prompt: impl Into<Message> + Send) -> Result<(String,AgentInfo), PromptError> {
+    pub async fn prompt_with_info(&self, prompt: impl Into<Message> + Send) -> Result<(String,AgentInfo), PromptError> {
         // 第一步：选择代理并获取其索引
         let agent_index = self.get_random_valid_agent_index().await
             .ok_or(PromptError::MaxDepthError {

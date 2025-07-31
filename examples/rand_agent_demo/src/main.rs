@@ -57,7 +57,8 @@ async fn main() -> anyhow::Result<()> {
         let handle: task::JoinHandle<Result<String, PromptError>> = task::spawn(async move {
             let prompt = format!("请简单介绍一下你自己，并告诉我你是第{}个任务", i + 1);
             // let prompt = "将一个笑话".to_string();
-            let result = agent_clone.prompt(&prompt).await?;
+            let (result,info) = agent_clone.prompt_with_info(&prompt).await?;
+            println!("agent info {info:?}");
             Ok(result)
         });
         handles.push(handle);
