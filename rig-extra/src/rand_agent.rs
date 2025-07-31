@@ -247,21 +247,6 @@ impl RandAgent {
         self.len().await == 0
     }
     
-    /// 获取所有代理（用于调试或检查）
-    #[deprecated(since = "0.6.1", note = "Renamed to `get_agent_info`")]
-    pub async fn agents(&self) -> Vec<(String, String, u32, u32)> {
-        let agents = self.agents.lock().await;
-        agents
-            .iter()
-            .map(|state| (
-                state.info.provider.clone(),
-                state.info.model.clone(),
-                state.info.failure_count,
-                state.info.max_failures
-            ))
-            .collect()
-    }
-
     /// 获取agent info
     pub async fn get_agents_info(&self) -> Vec<AgentInfo> {
         let  agents = self.agents.lock().await;
@@ -339,6 +324,65 @@ impl RandAgent {
             println!("retrying {err:?} after {dur:?}");
         })
         .await?;
+        Ok(content)
+    }
+
+    #[allow(refining_impl_trait)]
+    async fn prompt_with_info(&self, prompt: impl Into<Message> + Send) -> Result<(String,AgentInfo), PromptError> {
+        // 第一步：选择代理并获取其索引
+        let agent_index = self.get_random_valid_agent_index().await
+            .ok_or(PromptError::MaxDepthError {
+                max_depth: 0,
+                chat_history: vec![],
+                prompt: "没有有效agent".into(),
+            })?;
+
+        // 第二步：加锁并获取可变引用
+        let mut agents = self.agents.lock().await;
+        let agent_state = &mut agents[agent_index];
+        
+        let agent_info = agent_state.info.clone();
+        
+        tracing::info!("prompt_with_info Using provider: {}, model: {},id: {}", agent_state.info.provider, agent_state.info.model,agent_state.info.id);
+        match agent_state.agent.prompt(prompt).await {
+            Ok(content) => {
+                agent_state.record_success();
+                Ok((content, agent_info))
+            }
+            Err(e) => {
+                agent_state.record_failure();
+                if !agent_state.is_valid() {
+                    if let Some(cb) = &self.on_agent_invalid {
+                        cb(agent_state.id);
+                    }
+                }
+                Err(e)
+            }
+        }
+    }
+
+    /// 添加失败重试
+    pub async fn try_invoke_with_info_retry(&self, info: Message, retry_num: Option<usize>) -> Result<(String,AgentInfo), RandAgentError> {
+        let mut config = ExponentialBuilder::default();
+        if let Some(retry_num) = retry_num {
+            config = config.with_max_times(retry_num)
+        }
+
+        let info = Arc::new(info);
+
+        let content = (|| {
+            let agent = self.clone();
+            let prompt = info.clone();
+            async move {
+                agent.prompt_with_info((*prompt).clone()).await
+            }
+        })
+            .retry(config)
+            .sleep(tokio::time::sleep)
+            .notify(|err: &PromptError, dur: Duration| {
+                println!("retrying {err:?} after {dur:?}");
+            })
+            .await?;
         Ok(content)
     }
 }
