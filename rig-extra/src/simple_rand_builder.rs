@@ -46,21 +46,23 @@ impl RandAgentBuilder{
         for agent_conf in agent_configs {
             match agent_conf.provider {
                 ProviderEnum::Anthropic => {
-                    let mut client_builder = anthropic::ClientBuilder::new(&agent_conf.api_key);
+                    let mut client_builder = anthropic::Client::builder(&agent_conf.api_key);
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url);
                     }
-                    let client = client_builder.build();
-                    let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
-                    let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
-                    self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                    match client_builder.build() {
+                        Ok(client) => {
+                            let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
+                            let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
+                            self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                        }
+                        Err(err) => {
+                            tracing::error!("添加 {} 错误: {}",agent_conf.provider,err);
+                        }
+                    }
                 }
                 ProviderEnum::Cohere => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        cohere::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        cohere::Client::new(&agent_conf.api_key)
-                    };
+                    let client = cohere::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
@@ -75,34 +77,45 @@ impl RandAgentBuilder{
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
                 }
                 ProviderEnum::Mistral => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        mistral::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        mistral::Client::new(&agent_conf.api_key)
-                    };
+                    let client = mistral::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
                 }
                 ProviderEnum::OpenAi => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        openai::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        openai::Client::new(&agent_conf.api_key)
-                    };
-                    let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
-                    let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
-                    self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                    let mut client_builder = openai::Client::builder(&agent_conf.api_key);
+                    if let Some(api_base_url) = &agent_conf.api_base_url {
+                        client_builder = client_builder.base_url(api_base_url)
+                    }
+
+                    match client_builder.build() {
+                        Ok(client) => {
+                            let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
+                            let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
+                            self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                        }
+                        Err(err) => {
+                            tracing::error!("添加 {} 错误: {}",agent_conf.provider,err);
+                        }
+                    }
                 }
                 ProviderEnum::OpenRouter => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        openrouter::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        openrouter::Client::new(&agent_conf.api_key)
-                    };
-                    let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
-                    let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
-                    self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+
+                    let mut client_builder = openrouter::Client::builder(&agent_conf.api_key);
+                    if let Some(api_base_url) = &agent_conf.api_base_url {
+                        client_builder = client_builder.base_url(api_base_url)
+                    }
+
+                    match client_builder.build() {
+                        Ok(client) => {
+                            let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
+                            let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
+                            self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                        }
+                        Err(err) => {
+                            tracing::error!("添加 {} 错误: {}",agent_conf.provider,err);
+                        }
+                    }
                 }
                 ProviderEnum::Together => {
                     let client = together::Client::new(&agent_conf.api_key);
@@ -120,11 +133,7 @@ impl RandAgentBuilder{
                     tracing::info!("Azure simple_builder暂不支持,参数有点多，可以自行添加........ ")
                 }
                 ProviderEnum::DeepSeek => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        deepseek::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        deepseek::Client::new(&agent_conf.api_key)
-                    };
+                    let client = deepseek::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
@@ -133,54 +142,45 @@ impl RandAgentBuilder{
                     tracing::info!("Galadriel simple_builder暂不支持，可以自行添加........ ")
                 }
                 ProviderEnum::Groq => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        groq::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        groq::Client::new(&agent_conf.api_key)
-                    };
+                    let client =groq::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
                 }
                 ProviderEnum::Hyperbolic => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        hyperbolic::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        hyperbolic::Client::new(&agent_conf.api_key)
-                    };
+                    let client = hyperbolic::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
                 }
                 ProviderEnum::Mira => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        moonshot::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        moonshot::Client::new(&agent_conf.api_key)
-                    };
+                    let client = mira::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
                 }
                 ProviderEnum::Mooshot => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        moonshot::Client::from_url(&agent_conf.api_key,&api_base_url)
-                    }else {
-                        moonshot::Client::new(&agent_conf.api_key)
-                    };
+                    let client = moonshot::Client::new(&agent_conf.api_key);
                     let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
                     let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
                     self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
                 }
                 ProviderEnum::Ollama => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        ollama::Client::from_url(&api_base_url)
-                    }else {
-                        ollama::Client::new()
-                    };
-                    let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
-                    let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
-                    self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                    let mut client_builder = ollama::Client::builder();
+                    if let Some(api_base_url) = &agent_conf.api_base_url {
+                        client_builder = client_builder.base_url(api_base_url);
+                    }
+
+                    match client_builder.build() {
+                        Ok(client) => {
+                            let system_prompt = agent_conf.system_prompt.unwrap_or(global_system_prompt.clone());
+                            let agent = client.agent(&agent_conf.model_name).preamble(&system_prompt).build();
+                            self.agents.push((agent, agent_conf.id, agent_conf.provider.to_string(), agent_conf.model_name));
+                        }
+                        Err(err) => {
+                            tracing::error!("添加 {} 错误: {}",agent_conf.provider,err);
+                        }
+                    }
                 }
                 ProviderEnum::Perplexity => {
                     tracing::info!("Perplexity 暂不支持,没有实现BoxAgent........ ")

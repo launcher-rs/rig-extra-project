@@ -121,7 +121,7 @@ enum ApiResponse<T> {
 // ================================================================
 pub const BIGMODEL_GLM_4_FLASH: &str = "glm-4-flash";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize,Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompletionResponse {
     pub choices: Vec<Choice>,
