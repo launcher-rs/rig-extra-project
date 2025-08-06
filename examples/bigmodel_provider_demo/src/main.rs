@@ -1,4 +1,5 @@
 use config::Config;
+use rig_extra::client::CompletionClient;
 use rig_extra::completion::{Prompt, ToolDefinition};
 use rig_extra::extra_providers::bigmodel;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
@@ -7,7 +8,6 @@ use rig_extra::tool::Tool;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use rig_extra::client::CompletionClient;
 
 #[derive(Deserialize)]
 struct OperationArgs {

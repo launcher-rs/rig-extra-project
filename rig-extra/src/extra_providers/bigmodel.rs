@@ -1,9 +1,9 @@
+use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient, ProviderValue};
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::extractor::ExtractorBuilder;
 use rig::message::{MessageError, Text};
 use rig::providers::openai;
-use rig::{OneOrMany, completion, message, client};
-use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient, ProviderValue};
+use rig::{OneOrMany, client, completion, message};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -48,8 +48,6 @@ impl Client {
         }
     }
 
-
-
     fn post(&self, path: &str) -> reqwest::RequestBuilder {
         let url = format!("{}/{}", self.base_url, path).replace("//", "/");
         self.http_client.post(url)
@@ -58,8 +56,6 @@ impl Client {
     pub fn completion_model(&self, model: &str) -> CompletionModel {
         CompletionModel::new(self.clone(), model)
     }
-
-
 
     /// 为completion模型创建提取构建器
     pub fn extractor<T: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync>(
@@ -73,7 +69,7 @@ impl Client {
 impl ProviderClient for Client {
     fn from_env() -> Self
     where
-        Self: Sized
+        Self: Sized,
     {
         let api_key = std::env::var("BIGMODEL_API_KEY").expect("BIGMODEL_KEY not set");
         Self::new(&api_key)
@@ -81,9 +77,9 @@ impl ProviderClient for Client {
 
     fn from_val(input: ProviderValue) -> Self
     where
-        Self: Sized
+        Self: Sized,
     {
-        let  client::ProviderValue::Simple(api_key) = input else {
+        let client::ProviderValue::Simple(api_key) = input else {
             panic!("Incorrect provider value type")
         };
         Self::new(&api_key)
@@ -93,8 +89,6 @@ impl ProviderClient for Client {
 impl AsTranscription for Client {}
 
 impl AsEmbeddings for Client {}
-
-
 
 impl CompletionClient for Client {
     type CompletionModel = CompletionModel;
@@ -121,7 +115,7 @@ enum ApiResponse<T> {
 // ================================================================
 pub const BIGMODEL_GLM_4_FLASH: &str = "glm-4-flash";
 
-#[derive(Debug, Deserialize,Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompletionResponse {
     pub choices: Vec<Choice>,
@@ -396,8 +390,6 @@ pub struct CompletionModel {
     pub model: String,
 }
 
-
-
 // 函数定义
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -549,5 +541,3 @@ impl completion::CompletionModel for CompletionModel {
         send_compatible_streaming_request(builder).await
     }
 }
-
-

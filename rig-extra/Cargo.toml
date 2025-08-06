@@ -1,6 +1,6 @@
 [package]
 name = "rig-extra"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2024"
 authors = ["cyberdoors"]
 keywords = ["rig-core-extra", "bigmodel"]
@@ -10,7 +10,7 @@ license = "MIT"
 
 
 [dependencies]
-rig-core = { version = "0.16.0",optional = true,default-features = false }
+rig-core = { version = "0.17.1",optional = true,default-features = false }
 serde = { version = "1.0.217", features = ["derive"] }
 reqwest = { version = "0.12",default-features = false,optional = true,features = ["json", "stream", "multipart"]}
 serde_json = "1.0.135"

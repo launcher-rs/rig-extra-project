@@ -5,6 +5,7 @@ use config::Config;
 use rig_extra::completion::Prompt;
 use rig_extra::extra_providers;
 
+use rig_extra::client::CompletionClient;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
 use rig_extra::tool::ToolDyn;
 use rmcp::{
@@ -12,7 +13,6 @@ use rmcp::{
     model::{ClientCapabilities, ClientInfo, Implementation},
     transport::SseClientTransport,
 };
-use rig_extra::client::CompletionClient;
 
 #[tokio::main]
 async fn main() {
