@@ -34,6 +34,13 @@ rig-epub = ["rig-core/epub"]
 rig-rayon = ["rig-core/rayon"]
 rig-worker = ["rig-core/worker"]
 rig-mcp = ["rig-core/mcp"]
+rig-rmcp = ["rig-core/rmcp"]
 rig-socks = ["rig-core/socks"]
-rig-reqwest-rustls = ["rig-core/reqwest-rustls","reqwest/rustls-tls", "reqwest/charset", "reqwest/http2", "reqwest/macos-system-configuration"]
+rig-reqwest-rustls = [
+    "rig-core/reqwest-rustls",
+    "reqwest/rustls-tls",
+    "reqwest/charset",
+    "reqwest/http2",
+    "reqwest/macos-system-configuration"
+]
 
