@@ -2154,17 +2154,24 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "futures",
+ "http",
+ "oauth2",
  "paste",
  "pin-project-lite",
+ "process-wrap",
+ "reqwest",
  "rmcp-macros 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars 1.0.4",
  "serde",
  "serde_json",
+ "sse-stream",
  "thiserror 2.0.12",
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "tower-service",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -2218,6 +2225,19 @@ dependencies = [
  "quote",
  "serde_json",
  "syn",
+]
+
+[[package]]
+name = "rmcp_demo"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "rig-extra",
+ "rmcp 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

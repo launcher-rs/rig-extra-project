@@ -1,0 +1,23 @@
+[package]
+name = "rmcp_demo"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+
+[dependencies]
+rig-extra = {path = "../../rig-extra",features = ["rig-rmcp"]}
+tokio = { version = "1.43.0", features = ["full"] }
+serde_json = "1.0.140"
+config = "0.15.11"
+tracing-subscriber = "0.3.19"
+tracing = "0.1.41"
+rmcp = { version = "0.3",features = [
+    "client",
+    "transport-sse-client",
+    "reqwest",
+    "transport-streamable-http-client",
+    "transport-child-process",
+    "tower",
+    "auth"
+] }
