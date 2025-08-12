@@ -114,6 +114,7 @@ enum ApiResponse<T> {
 // Bigmodel Completion API
 // ================================================================
 pub const BIGMODEL_GLM_4_FLASH: &str = "glm-4-flash";
+pub const BIGMODEL_GLM_4_5_FLASH: &str = "glm-4.5-flash";
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

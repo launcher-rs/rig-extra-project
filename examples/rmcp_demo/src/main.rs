@@ -3,7 +3,7 @@ use rig_extra::completion::Prompt;
 use rig_extra::extra_providers;
 
 use rig_extra::client::CompletionClient;
-use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
+use rig_extra::extra_providers::bigmodel::{BIGMODEL_GLM_4_5_FLASH, BIGMODEL_GLM_4_FLASH};
 use rig_extra::tool::ToolDyn;
 use rmcp::{
     ServiceExt,
@@ -65,7 +65,7 @@ async fn main() {
     let llm_client = extra_providers::bigmodel::Client::new(api_key.as_str());
 
     let mut agent = llm_client
-        .agent(BIGMODEL_GLM_4_FLASH)
+        .agent(BIGMODEL_GLM_4_5_FLASH)
         .preamble("你是一个ai助手");
     
     let agent = all_tools
