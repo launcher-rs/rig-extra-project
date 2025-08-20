@@ -1,8 +1,9 @@
 use config::Config;
+use rig_extra::agent::stream_to_stdout;
 use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::rand_agent::RandAgentBuilder;
 use rig_extra::simple_rand_builder::AgentConfig;
-use rig_extra::streaming::{stream_to_stdout, StreamingPrompt};
+use rig_extra::streaming::StreamingPrompt;
 use std::sync::Arc;
 use tokio::task;
 
@@ -133,14 +134,10 @@ async fn main() -> anyhow::Result<()> {
     // 异步调用
     if let Some(agent) = agent_arc.get_random_valid_agent_state().await {
         let agent = agent.agent.clone();
-        match agent.stream_prompt("写一个故事").await {
-            Ok(mut stream) => {
-                stream_to_stdout(&agent, &mut stream).await?;
-            }
-            Err(err) => {
-                println!("error: {err}");
-            }
-        }
+        let mut stream = agent.stream_prompt("写一个故事").await;
+        let res = stream_to_stdout(&mut stream).await?;
+        println!("Token usage response: {usage:?}", usage = res.usage());
+        println!("Final text response: {message:?}", message = res.response());
     }
 
     // 获取agents info

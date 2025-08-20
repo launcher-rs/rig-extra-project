@@ -1,9 +1,10 @@
 use config::Config;
+use rig_extra::agent::stream_to_stdout;
 use rig_extra::client::CompletionClient;
 use rig_extra::completion::{Prompt, ToolDefinition};
 use rig_extra::extra_providers::bigmodel;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
-use rig_extra::streaming::{StreamingPrompt, stream_to_stdout};
+use rig_extra::streaming::StreamingPrompt;
 use rig_extra::tool::Tool;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -59,10 +60,13 @@ impl Tool for Adder {
 /// A record representing a person
 struct Person {
     /// The person's first name, if provided (null otherwise)
+    #[schemars(required)]
     pub first_name: Option<String>,
     /// The person's last name, if provided (null otherwise)
+    #[schemars(required)]
     pub last_name: Option<String>,
     /// The person's job, if provided (null otherwise)
+    #[schemars(required)]
     pub job: Option<String>,
 }
 
@@ -96,8 +100,10 @@ async fn main() {
 
     // 异步调用
     tracing::info!("异步调用:");
-    let mut stream = agent.stream_prompt("hello").await.unwrap();
-    stream_to_stdout(&agent, &mut stream).await.unwrap();
+    let mut stream = agent.stream_prompt("hello").await;
+    let res = stream_to_stdout(&mut stream).await.unwrap();
+    println!("Token usage response: {usage:?}", usage = res.usage());
+    println!("Final text response: {message:?}", message = res.response());
 
     tracing::info!("工具调用==============");
     let tool_agent = client
@@ -120,11 +126,14 @@ async fn main() {
 
     // // 异步调用
     tracing::info!("异步调用:");
-    let mut stream = tool_agent.stream_prompt("8+12=").await.unwrap();
-    stream_to_stdout(&tool_agent, &mut stream).await.unwrap();
+    let mut stream = tool_agent.stream_prompt("8+12=").await;
+    let res = stream_to_stdout(&mut stream).await.unwrap();
+    println!("Token usage response: {usage:?}", usage = res.usage());
+    println!("Final text response: {message:?}", message = res.response());
 
     // 提取
     tracing::info!("Extracting...:");
+    // let data_extractor = client.extractor::<Person>(BIGMODEL_GLM_4_FLASH).build();
     let data_extractor = client.extractor::<Person>(BIGMODEL_GLM_4_FLASH).build();
 
     let person = data_extractor

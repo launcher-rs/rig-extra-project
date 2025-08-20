@@ -3,8 +3,7 @@ use rig_extra::completion::Prompt;
 use rig_extra::extra_providers;
 
 use rig_extra::client::CompletionClient;
-use rig_extra::extra_providers::bigmodel::{BIGMODEL_GLM_4_5_FLASH, BIGMODEL_GLM_4_FLASH};
-use rig_extra::tool::ToolDyn;
+use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_5_FLASH;
 use rmcp::{
     ServiceExt,
     model::{ClientCapabilities, ClientInfo, Implementation},
@@ -55,7 +54,7 @@ async fn main() {
 
     let server_info = client.peer_info();
     tracing::debug!("server info: {:#?}", server_info);
-    
+
     let tools = client.list_tools(Default::default()).await.unwrap();
     tracing::debug!("tools: {:#?}", tools);
 
@@ -64,17 +63,14 @@ async fn main() {
 
     let llm_client = extra_providers::bigmodel::Client::new(api_key.as_str());
 
-    let mut agent = llm_client
+    let agent = llm_client
         .agent(BIGMODEL_GLM_4_5_FLASH)
         .preamble("你是一个ai助手");
-    
+
     let agent = all_tools
         .into_iter()
-        .fold(agent, |agent, tool| {
-            agent.rmcp_tool(tool,client.clone())
-        }).build();
-
-  
+        .fold(agent, |agent, tool| agent.rmcp_tool(tool, client.clone()))
+        .build();
 
     let result = agent.prompt("获取github趋势榜").await.unwrap();
 

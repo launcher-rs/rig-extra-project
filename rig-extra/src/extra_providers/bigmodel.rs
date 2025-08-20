@@ -1,10 +1,8 @@
 use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient, ProviderValue};
 use rig::completion::{CompletionError, CompletionRequest};
-use rig::extractor::ExtractorBuilder;
 use rig::message::{MessageError, Text};
 use rig::providers::openai;
 use rig::{OneOrMany, client, completion, message};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -57,13 +55,13 @@ impl Client {
         CompletionModel::new(self.clone(), model)
     }
 
-    /// 为completion模型创建提取构建器
-    pub fn extractor<T: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync>(
-        &self,
-        model: &str,
-    ) -> ExtractorBuilder<T, CompletionModel> {
-        ExtractorBuilder::new(self.completion_model(model))
-    }
+    // 为completion模型创建提取构建器
+    // pub fn extractor<T: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync>(
+    //     &self,
+    //     model: &str,
+    // ) -> ExtractorBuilder<T, CompletionModel> {
+    //     ExtractorBuilder::new(self.completion_model(model))
+    // }
 }
 
 impl ProviderClient for Client {

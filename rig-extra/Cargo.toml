@@ -10,17 +10,16 @@ license = "MIT"
 
 
 [dependencies]
-rig-core = { version = "0.17.1",optional = true,default-features = false }
-serde = { version = "1.0.217", features = ["derive"] }
+rig-core = { version = "0.18.1",optional = true,default-features = false }
+serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.12",default-features = false,optional = true,features = ["json", "stream", "multipart"]}
-serde_json = "1.0.135"
+serde_json = "1"
 tracing = "0.1.41"
-schemars = "0.8.22"
 rand = "0.9.1"
 thiserror = "2"
 tokio = {version = "1",features = ["full"]}
 strum_macros = "0.27.1"
-backon = "1.5.1"
+backon = "1.5.2"
 
 # 使用feature ,将 rig-core导入
 [features]
@@ -33,7 +32,6 @@ rig-pdf = ["rig-core/pdf"]
 rig-epub = ["rig-core/epub"]
 rig-rayon = ["rig-core/rayon"]
 rig-worker = ["rig-core/worker"]
-rig-mcp = ["rig-core/mcp"]
 rig-rmcp = ["rig-core/rmcp"]
 rig-socks = ["rig-core/socks"]
 rig-reqwest-rustls = [
