@@ -33,7 +33,7 @@ async fn main() {
     // 传输层
     let transport = SseClientTransport::start(mcp_addr)
         .await
-        .expect("不能连接MCP服务区");
+        .expect("不能连接MCP服务器");
 
     let client_info = ClientInfo {
         protocol_version: Default::default(),
