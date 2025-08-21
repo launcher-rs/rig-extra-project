@@ -337,7 +337,7 @@ impl RandAgentBuilder {
                     }
                 }
                 ProviderEnum::Perplexity => {
-                    let client = perplexity::Client::new(&agent_conf.api_key);
+                    // let client = perplexity::Client::new(&agent_conf.api_key);
                     // let agent = client
                     //     .agent(&agent_conf.model_name)
                     //     .name(agent_name.as_str())
