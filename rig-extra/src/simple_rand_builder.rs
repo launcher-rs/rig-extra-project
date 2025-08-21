@@ -26,7 +26,8 @@ pub enum ProviderEnum {
     Mooshot,
     Ollama,
     Perplexity,
-    Voyageai,
+    // embedding模型
+    // Voyageai,
     Bigmodel,
 }
 
@@ -350,21 +351,6 @@ impl RandAgentBuilder {
                     //     agent_conf.model_name,
                     // ));
                     tracing::info!("Perplexity 暂不支持,没有实现BoxAgent........ ")
-                }
-                ProviderEnum::Voyageai => {
-                    // let client = voyageai::Client::new(&agent_conf.api_key);
-                    // let agent = client
-                    //     .agent(&agent_conf.model_name)
-                    //     .name(agent_name.as_str())
-                    //     .preamble(&system_prompt)
-                    //     .build();
-                    // self.agents.push((
-                    //     agent,
-                    //     agent_conf.id,
-                    //     agent_conf.provider.to_string(),
-                    //     agent_conf.model_name,
-                    // ));
-                    tracing::info!("Voyageai 暂不支持,........ ")
                 }
                 ProviderEnum::Bigmodel => {
                     let client = if let Some(api_base_url) = agent_conf.api_base_url {
