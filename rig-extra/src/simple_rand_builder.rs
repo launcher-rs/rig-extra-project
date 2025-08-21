@@ -94,7 +94,28 @@ impl RandAgentBuilder {
                     ));
                 }
                 ProviderEnum::Gemini => {
-                    tracing::info!("Gemini 暂不支持,没有实现BoxAgent........ ")
+                    let mut client_builder = gemini::Client::builder(&agent_conf.api_key);
+                    if let Some(api_base_url) = &agent_conf.api_base_url {
+                        client_builder = client_builder.base_url(api_base_url);
+                    }
+                    match client_builder.build() {
+                        Ok(client) => {
+                            let agent = client
+                                .agent(&agent_conf.model_name)
+                                .name(agent_name.as_str())
+                                .preamble(&system_prompt)
+                                .build();
+                            self.agents.push((
+                                agent,
+                                agent_conf.id,
+                                agent_conf.provider.to_string(),
+                                agent_conf.model_name,
+                            ));
+                        }
+                        Err(err) => {
+                            tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
+                        }
+                    }
                 }
                 ProviderEnum::Huggingface => {
                     let client = huggingface::Client::new(&agent_conf.api_key);
@@ -221,7 +242,18 @@ impl RandAgentBuilder {
                     ));
                 }
                 ProviderEnum::Galadriel => {
-                    tracing::info!("Galadriel simple_builder暂不支持，可以自行添加........ ")
+                    let client = galadriel::Client::new(&agent_conf.api_key);
+                    let agent = client
+                        .agent(&agent_conf.model_name)
+                        .name(agent_name.as_str())
+                        .preamble(&system_prompt)
+                        .build();
+                    self.agents.push((
+                        agent,
+                        agent_conf.id,
+                        agent_conf.provider.to_string(),
+                        agent_conf.model_name,
+                    ));
                 }
                 ProviderEnum::Groq => {
                     let client = groq::Client::new(&agent_conf.api_key);
@@ -305,9 +337,33 @@ impl RandAgentBuilder {
                     }
                 }
                 ProviderEnum::Perplexity => {
+                    let client = perplexity::Client::new(&agent_conf.api_key);
+                    // let agent = client
+                    //     .agent(&agent_conf.model_name)
+                    //     .name(agent_name.as_str())
+                    //     .preamble(&system_prompt)
+                    //     .build();
+                    // self.agents.push((
+                    //     agent,
+                    //     agent_conf.id,
+                    //     agent_conf.provider.to_string(),
+                    //     agent_conf.model_name,
+                    // ));
                     tracing::info!("Perplexity 暂不支持,没有实现BoxAgent........ ")
                 }
                 ProviderEnum::Voyageai => {
+                    // let client = voyageai::Client::new(&agent_conf.api_key);
+                    // let agent = client
+                    //     .agent(&agent_conf.model_name)
+                    //     .name(agent_name.as_str())
+                    //     .preamble(&system_prompt)
+                    //     .build();
+                    // self.agents.push((
+                    //     agent,
+                    //     agent_conf.id,
+                    //     agent_conf.provider.to_string(),
+                    //     agent_conf.model_name,
+                    // ));
                     tracing::info!("Voyageai 暂不支持,........ ")
                 }
                 ProviderEnum::Bigmodel => {
