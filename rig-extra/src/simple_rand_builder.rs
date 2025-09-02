@@ -1,8 +1,11 @@
 use crate::extra_providers::bigmodel;
+use crate::get_openai_agent::get_openai_agent;
 use crate::rand_agent::RandAgentBuilder;
-use rig::client::completion::CompletionClientDyn;
+use rig::agent::AgentBuilder;
+use rig::client::completion::{CompletionClientDyn, CompletionModelHandle};
 use rig::providers::*;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use strum_macros::Display;
 
 #[derive(Debug, Display, Deserialize, Serialize)]
@@ -154,12 +157,12 @@ impl RandAgentBuilder {
 
                     match client_builder.build() {
                         Ok(client) => {
-                            // 不支持 completions_api,至少ollama使用这个会报错
-                            let agent = client
-                                .agent(&agent_conf.model_name)
-                                .name(agent_name.as_str())
-                                .preamble(&system_prompt)
-                                .build();
+                            let agent = get_openai_agent(
+                                client,
+                                &agent_conf.model_name,
+                                agent_name,
+                                system_prompt,
+                            );
                             self.agents.push((
                                 agent,
                                 agent_conf.id,

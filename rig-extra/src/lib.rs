@@ -1,9 +1,11 @@
 pub mod error;
 pub mod extra_providers;
+mod get_openai_agent;
 mod get_openrouter_model_list;
 mod json_utils;
 pub mod rand_agent;
 pub mod simple_rand_builder;
+
 pub use get_openrouter_model_list::*;
 
 /// 导出 backon 实现失败重试
