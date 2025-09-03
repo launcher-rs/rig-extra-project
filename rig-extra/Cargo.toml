@@ -1,16 +1,16 @@
 [package]
 name = "rig-extra"
-version = "0.9.1"
+version = "0.10.0"
 edition = "2024"
 authors = ["cyberdoors"]
-keywords = ["rig-core-extra", "bigmodel"]
-description = "rig-core的简单扩展"
+keywords = ["rig-core-extra", "bigmodel","rig-core"]
+description = "基于rig-core的简单扩展"
 repository = "https://github.com/launcher-rs/rig-extra-project"
 license = "MIT"
 
 
 [dependencies]
-rig-core = { version = "0.18.2",optional = true,default-features = false }
+rig-core = { version = "0.19.0",optional = true,default-features = false }
 serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.12",default-features = false,optional = true,features = ["json", "stream", "multipart"]}
 serde_json = "1"
