@@ -1,11 +1,9 @@
 use crate::extra_providers::bigmodel;
 use crate::get_openai_agent::get_openai_agent;
 use crate::rand_agent::RandAgentBuilder;
-use rig::agent::AgentBuilder;
-use rig::client::completion::{CompletionClientDyn, CompletionModelHandle};
+use rig::client::completion::CompletionClientDyn;
 use rig::providers::*;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use strum_macros::Display;
 
 #[derive(Debug, Display, Deserialize, Serialize)]

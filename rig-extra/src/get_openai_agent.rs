@@ -1,4 +1,3 @@
-use crate::simple_rand_builder::AgentConfig;
 use rig::agent::{Agent, AgentBuilder};
 use rig::client::CompletionClient;
 use rig::client::completion::CompletionModelHandle;
@@ -17,10 +16,8 @@ pub fn get_openai_agent(
         inner: Arc::new(model),
     };
 
-    let agent = AgentBuilder::new(handle)
+    AgentBuilder::new(handle)
         .name(agent_name.as_str())
         .preamble(&system_prompt)
-        .build();
-
-    agent
+        .build()
 }
