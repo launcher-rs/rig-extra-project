@@ -31,6 +31,7 @@ async fn main() {
         .expect("Missing mcp_addr in Settings");
 
     // 传输层
+    // start需要 transport-sse-client-reqwest features
     let transport = SseClientTransport::start(mcp_addr)
         .await
         .expect("不能连接MCP服务器");
@@ -40,7 +41,10 @@ async fn main() {
         capabilities: ClientCapabilities::default(),
         client_info: Implementation {
             name: "test sse client".to_string(),
+            title: None,
             version: "0.0.1".to_string(),
+            icons: None,
+            website_url: None,
         },
     };
 

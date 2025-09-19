@@ -88,7 +88,7 @@ impl Prompt for RandAgent {
                 .await
                 .ok_or(PromptError::MaxDepthError {
                     max_depth: 0,
-                    chat_history: vec![],
+                    chat_history: Box::new(vec![]),
                     prompt: "没有有效agent".into(),
                 })?;
 
@@ -371,7 +371,7 @@ impl RandAgent {
                 .await
                 .ok_or(PromptError::MaxDepthError {
                     max_depth: 0,
-                    chat_history: vec![],
+                    chat_history: Box::new(vec![]),
                     prompt: "没有有效agent".into(),
                 })?;
 

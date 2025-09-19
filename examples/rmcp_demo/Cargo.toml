@@ -12,9 +12,9 @@ serde_json = "1.0.140"
 config = "0.15.11"
 tracing-subscriber = "0.3.19"
 tracing = "0.1.41"
-rmcp = { version = "0.5",features = [
+rmcp = { version = "0.6",features = [
     "client",
-    "transport-sse-client",
+    "transport-sse-client-reqwest",
     "reqwest",
     "transport-streamable-http-client",
     "transport-child-process",
