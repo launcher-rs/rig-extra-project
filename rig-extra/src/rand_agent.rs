@@ -109,10 +109,10 @@ impl Prompt for RandAgent {
             }
             Err(e) => {
                 agent_state.record_failure();
-                if !agent_state.is_valid() {
-                    if let Some(cb) = &self.on_agent_invalid {
-                        cb(agent_state.id);
-                    }
+                if !agent_state.is_valid()
+                    && let Some(cb) = &self.on_agent_invalid
+                {
+                    cb(agent_state.id);
                 }
                 Err(e)
             }
@@ -394,10 +394,10 @@ impl RandAgent {
             }
             Err(e) => {
                 agent_state.record_failure();
-                if !agent_state.is_valid() {
-                    if let Some(cb) = &self.on_agent_invalid {
-                        cb(agent_state.id);
-                    }
+                if !agent_state.is_valid()
+                    && let Some(cb) = &self.on_agent_invalid
+                {
+                    cb(agent_state.id);
                 }
                 Err(e)
             }

@@ -5,6 +5,7 @@ mod get_openrouter_model_list;
 mod json_utils;
 pub mod rand_agent;
 pub mod simple_rand_builder;
+pub mod tools;
 
 pub use get_openrouter_model_list::*;
 

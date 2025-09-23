@@ -1,6 +1,6 @@
 [package]
 name = "rig-extra"
-version = "0.11.0"
+version = "0.12.0"
 edition = "2024"
 authors = ["cyberdoors"]
 keywords = ["rig-core-extra", "bigmodel","rig-core"]
@@ -20,6 +20,7 @@ thiserror = "2"
 tokio = {version = "1",features = ["full"]}
 strum_macros = "0.27.1"
 backon = "1.5.2"
+schemars = "1.0.4"
 
 # 使用feature ,将 rig-core导入
 [features]

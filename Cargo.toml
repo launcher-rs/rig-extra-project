@@ -6,6 +6,7 @@ members = [
     "examples/bigmodel_provider_demo",
     "examples/rmcp_demo",
     "examples/rand_agent_demo",
-    "examples/retry_demo"
+    "examples/retry_demo",
+    "examples/tools_demo"
 ]
 

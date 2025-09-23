@@ -1,6 +1,7 @@
 # bigmodel api key
 bigmodel_api_key = ""
 
+serpapi_api_key = ""
 
 mcp_addr = "http://127.0.0.1:8000/sse"
 
