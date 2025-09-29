@@ -9,12 +9,12 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 /// serpaapi 获取谷歌搜索
-pub struct SerpapiTools {
+pub struct SerpapiTool {
     /// api key
     pub api_key: String,
 }
 
-impl SerpapiTools {
+impl SerpapiTool {
     pub fn new<S: Into<String>>(api_key: S) -> Self {
         Self {
             api_key: api_key.into(),
@@ -46,8 +46,8 @@ pub struct SerpapiArgs {
     /// 搜索关键词
     pub query: String,
 }
-impl Tool for SerpapiTools {
-    const NAME: &'static str = "Serpapi Tools";
+impl Tool for SerpapiTool {
+    const NAME: &'static str = "Serpapi Tool";
     type Error = SerpapiError;
     type Args = SerpapiArgs;
     type Output = String;
