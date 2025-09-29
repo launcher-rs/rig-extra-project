@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-rig-extra = { path = "../../rig-extra" }
+rig-extra = { path = "../../rig-extra",features = ["rig-extra-tools"] }
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"

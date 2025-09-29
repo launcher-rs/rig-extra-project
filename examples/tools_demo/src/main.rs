@@ -3,7 +3,7 @@ use rig_extra::client::CompletionClient;
 use rig_extra::completion::Prompt;
 use rig_extra::extra_providers::bigmodel;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
-use rig_extra::tools::serpapi::SerpapiTools;
+use rig_extra::tools::serpapi_tool::SerpapiTool;
 
 #[tokio::main]
 async fn main() {
@@ -29,7 +29,7 @@ async fn main() {
     let agent = client
         .agent(BIGMODEL_GLM_4_FLASH)
         .name("ai agent")
-        .tool(SerpapiTools::new(serpapi_api_key))
+        .tool(SerpapiTool::new(serpapi_api_key))
         .preamble("你是一个ai助手")
         .build();
 

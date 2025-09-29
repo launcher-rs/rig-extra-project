@@ -60,7 +60,7 @@ impl DatetimeTool {
         info.join(",")
     }
 }
-impl Tool for DatetimeTool{
+impl Tool for DatetimeTool {
     const NAME: &'static str = "DatetimeTool";
     type Error = DatetimeToolError;
     type Args = EmptyArgs;
@@ -69,7 +69,8 @@ impl Tool for DatetimeTool{
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: "获取当前时间日期的工具,包括获取农历、公历，法定假期、生肖的信息".to_string(),
+            description: "获取当前时间日期的工具,包括获取农历、公历，法定假期、生肖的信息"
+                .to_string(),
             parameters: json!({
                 "type": "object",
                 "title": "No parameters",
@@ -85,19 +86,18 @@ impl Tool for DatetimeTool{
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::extra_providers::bigmodel;
+    use crate::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
     use config::Config;
     use rig::client::CompletionClient;
     use rig::completion::Prompt;
-    use crate::extra_providers::bigmodel;
-    use crate::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
-    use super::*;
 
     #[tokio::test]
     async fn test_datetime_tool() {
-        let current_dir = format!("{}\\..\\Settings",env!("CARGO_MANIFEST_DIR"));
+        let current_dir = format!("{}\\..\\Settings", env!("CARGO_MANIFEST_DIR"));
 
         let settings = Config::builder()
             .add_source(config::File::with_name(current_dir.as_str()))
@@ -107,7 +107,6 @@ mod tests {
         let api_key = settings
             .get_string("bigmodel_api_key")
             .expect("Missing API Key in Settings");
-
 
         let client = bigmodel::Client::new(api_key.as_str());
         let agent = client
