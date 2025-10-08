@@ -2,4 +2,8 @@
 
 基于[rig-core](https://github.com/0xPlaygrounds/rig)的简单扩展
 
-目前发现 [llm](https://github.com/graniet/llm.git)库 也挺不错的
+## 扩展功能
+* 添加 Z智谱 bigmodel provider
+* 添加随机agent
+* 添加失败重试功能
+* ...
