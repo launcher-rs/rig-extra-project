@@ -2,7 +2,7 @@ use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClien
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::message::{MessageError, Text};
 use rig::providers::openai;
-use rig::{OneOrMany, client, completion, message};
+use rig::{OneOrMany, client, completion, http_client, message};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -505,7 +505,8 @@ impl completion::CompletionModel for CompletionModel {
             .post("/chat/completions")
             .json(&request)
             .send()
-            .await?;
+            .await
+            .map_err(|e| http_client::Error::Instance(e.into()))?;
 
         if response.status().is_success() {
             let data: Value = response.json().await.expect("api error");
@@ -523,7 +524,12 @@ impl completion::CompletionModel for CompletionModel {
                 ApiResponse::Err(err) => Err(CompletionError::ProviderError(err.message)),
             }
         } else {
-            Err(CompletionError::ProviderError(response.text().await?))
+            Err(CompletionError::ProviderError(
+                response
+                    .text()
+                    .await
+                    .map_err(|e| http_client::Error::Instance(e.into()))?,
+            ))
         }
     }
 

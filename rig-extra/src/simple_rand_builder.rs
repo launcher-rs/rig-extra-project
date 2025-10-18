@@ -58,7 +58,7 @@ impl RandAgentBuilder {
 
             match agent_conf.provider {
                 ProviderEnum::Anthropic => {
-                    let mut client_builder = anthropic::Client::builder(&agent_conf.api_key);
+                    let mut client_builder = anthropic::ClientBuilder::new(&agent_conf.api_key);
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url);
                     }
@@ -148,55 +148,39 @@ impl RandAgentBuilder {
                     ));
                 }
                 ProviderEnum::OpenAi => {
-                    let mut client_builder = openai::Client::builder(&agent_conf.api_key);
+                    let mut client_builder = openai::ClientBuilder::new(&agent_conf.api_key);
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url)
                     }
 
-                    match client_builder.build() {
-                        Ok(client) => {
-                            let agent = get_openai_agent(
-                                client,
-                                &agent_conf.model_name,
-                                agent_name,
-                                system_prompt,
-                            );
-                            self.agents.push((
-                                agent,
-                                agent_conf.id,
-                                agent_conf.provider.to_string(),
-                                agent_conf.model_name,
-                            ));
-                        }
-                        Err(err) => {
-                            tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
-                        }
-                    }
+                    let client = client_builder.build();
+
+                    let agent =
+                        get_openai_agent(client, &agent_conf.model_name, agent_name, system_prompt);
+                    self.agents.push((
+                        agent,
+                        agent_conf.id,
+                        agent_conf.provider.to_string(),
+                        agent_conf.model_name,
+                    ));
                 }
                 ProviderEnum::OpenRouter => {
-                    let mut client_builder = openrouter::Client::builder(&agent_conf.api_key);
+                    let mut client_builder = openrouter::ClientBuilder::new(&agent_conf.api_key);
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url)
                     }
-
-                    match client_builder.build() {
-                        Ok(client) => {
-                            let agent = client
-                                .agent(&agent_conf.model_name)
-                                .name(agent_name.as_str())
-                                .preamble(&system_prompt)
-                                .build();
-                            self.agents.push((
-                                agent,
-                                agent_conf.id,
-                                agent_conf.provider.to_string(),
-                                agent_conf.model_name,
-                            ));
-                        }
-                        Err(err) => {
-                            tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
-                        }
-                    }
+                    let client = client_builder.build();
+                    let agent = client
+                        .agent(&agent_conf.model_name)
+                        .name(agent_name.as_str())
+                        .preamble(&system_prompt)
+                        .build();
+                    self.agents.push((
+                        agent,
+                        agent_conf.id,
+                        agent_conf.provider.to_string(),
+                        agent_conf.model_name,
+                    ));
                 }
                 ProviderEnum::Together => {
                     let client = together::Client::new(&agent_conf.api_key);
@@ -314,29 +298,23 @@ impl RandAgentBuilder {
                     ));
                 }
                 ProviderEnum::Ollama => {
-                    let mut client_builder = ollama::Client::builder();
+                    let mut client_builder = ollama::ClientBuilder::new();
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url);
                     }
 
-                    match client_builder.build() {
-                        Ok(client) => {
-                            let agent = client
-                                .agent(&agent_conf.model_name)
-                                .name(agent_name.as_str())
-                                .preamble(&system_prompt)
-                                .build();
-                            self.agents.push((
-                                agent,
-                                agent_conf.id,
-                                agent_conf.provider.to_string(),
-                                agent_conf.model_name,
-                            ));
-                        }
-                        Err(err) => {
-                            tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
-                        }
-                    }
+                    let client = client_builder.build();
+                    let agent = client
+                        .agent(&agent_conf.model_name)
+                        .name(agent_name.as_str())
+                        .preamble(&system_prompt)
+                        .build();
+                    self.agents.push((
+                        agent,
+                        agent_conf.id,
+                        agent_conf.provider.to_string(),
+                        agent_conf.model_name,
+                    ));
                 }
                 ProviderEnum::Perplexity => {
                     // let client = perplexity::Client::new(&agent_conf.api_key);

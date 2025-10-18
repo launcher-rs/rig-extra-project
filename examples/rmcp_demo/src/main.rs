@@ -69,11 +69,8 @@ async fn main() {
 
     let agent = llm_client
         .agent(BIGMODEL_GLM_4_5_FLASH)
-        .preamble("你是一个ai助手");
-
-    let agent = all_tools
-        .into_iter()
-        .fold(agent, |agent, tool| agent.rmcp_tool(tool, client.clone()))
+        .rmcp_tools(all_tools, client.peer().to_owned())
+        .preamble("你是一个ai助手")
         .build();
 
     let result = agent.prompt("获取github趋势榜").await.unwrap();
