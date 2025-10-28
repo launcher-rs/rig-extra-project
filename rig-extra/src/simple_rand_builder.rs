@@ -58,7 +58,8 @@ impl RandAgentBuilder {
 
             match agent_conf.provider {
                 ProviderEnum::Anthropic => {
-                    let mut client_builder = anthropic::ClientBuilder::new(&agent_conf.api_key);
+                    let mut client_builder =
+                        anthropic::ClientBuilder::<reqwest::Client>::new(&agent_conf.api_key);
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url);
                     }
@@ -165,7 +166,8 @@ impl RandAgentBuilder {
                     ));
                 }
                 ProviderEnum::OpenRouter => {
-                    let mut client_builder = openrouter::ClientBuilder::new(&agent_conf.api_key);
+                    let mut client_builder =
+                        openrouter::ClientBuilder::<reqwest::Client>::new(&agent_conf.api_key);
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url)
                     }
@@ -298,7 +300,7 @@ impl RandAgentBuilder {
                     ));
                 }
                 ProviderEnum::Ollama => {
-                    let mut client_builder = ollama::ClientBuilder::new();
+                    let mut client_builder = ollama::ClientBuilder::<reqwest::Client>::new();
                     if let Some(api_base_url) = &agent_conf.api_base_url {
                         client_builder = client_builder.base_url(api_base_url);
                     }

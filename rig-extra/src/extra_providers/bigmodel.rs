@@ -1,3 +1,6 @@
+use http::header;
+use reqwest::Method;
+use reqwest::header::HeaderValue;
 use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient, ProviderValue};
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::message::{MessageError, Text};
@@ -6,10 +9,11 @@ use rig::{OneOrMany, client, completion, http_client, message};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::json_utils;
+use crate::json_utils::merge;
 use rig::providers::openai::send_compatible_streaming_request;
 use rig::streaming::StreamingCompletionResponse;
-
-use crate::json_utils;
+use tracing::{Instrument, info_span};
 
 // ================================================================
 // BIGMODEL 客户端
@@ -18,7 +22,9 @@ const BIGMODEL_API_BASE_URL: &str = "https://open.bigmodel.cn/api/paas/v4/";
 
 #[derive(Clone, Debug)]
 pub struct Client {
+    api_key: String,
     base_url: String,
+    default_headers: http_client::HeaderMap,
     http_client: reqwest::Client,
 }
 
@@ -28,8 +34,16 @@ impl Client {
     }
 
     pub fn from_url(api_key: &str, base_url: &str) -> Self {
+        let mut default_headers = reqwest::header::HeaderMap::new();
+        default_headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            "application/json".parse().unwrap(),
+        );
+
         Self {
+            api_key: api_key.to_string(),
             base_url: base_url.to_string(),
+            default_headers,
             http_client: reqwest::Client::builder()
                 .default_headers({
                     let mut headers = reqwest::header::HeaderMap::new();
@@ -537,12 +551,57 @@ impl completion::CompletionModel for CompletionModel {
         &self,
         request: CompletionRequest,
     ) -> Result<StreamingCompletionResponse<Self::StreamingResponse>, CompletionError> {
+        let preamble = request.preamble.clone();
+
         let mut request = self.create_completion_request(request)?;
 
-        request = json_utils::merge(request, json!({"stream": true}));
+        request = merge(request, json!({"stream": true}));
 
-        let builder = self.client.post("/chat/completions").json(&request);
+        let body = serde_json::to_vec(&request)?;
 
-        send_compatible_streaming_request(builder).await
+        let url = format!(
+            "{}/{}",
+            self.client.base_url,
+            "/chat/completions".trim_start_matches('/')
+        );
+
+        let mut builder = http_client::Builder::new().uri(url).method(Method::POST);
+        for (header, value) in &self.client.default_headers {
+            builder = builder.header(header, value);
+        }
+
+        let auth_header = HeaderValue::from_str(&format!("Bearer {}", &self.client.api_key))
+            .map_err(http::Error::from)
+            .map_err(rig::http_client::Error::from)?;
+
+        builder = builder.header(header::AUTHORIZATION, auth_header);
+        builder = builder.header("Content-Type", "application/json");
+
+        let req = builder
+            .body(body)
+            .map_err(|e| CompletionError::HttpError(e.into()))?;
+
+        let span = if tracing::Span::current().is_disabled() {
+            info_span!(
+                target: "rig::completions",
+                "chat_streaming",
+                gen_ai.operation.name = "chat_streaming",
+                gen_ai.provider.name = "galadriel",
+                gen_ai.request.model = self.model,
+                gen_ai.system_instructions = preamble,
+                gen_ai.response.id = tracing::field::Empty,
+                gen_ai.response.model = tracing::field::Empty,
+                gen_ai.usage.output_tokens = tracing::field::Empty,
+                gen_ai.usage.input_tokens = tracing::field::Empty,
+                gen_ai.input.messages = serde_json::to_string(&request.get("messages").unwrap()).unwrap(),
+                gen_ai.output.messages = tracing::field::Empty,
+            )
+        } else {
+            tracing::Span::current()
+        };
+
+        send_compatible_streaming_request(self.client.http_client.clone(), req)
+            .instrument(span)
+            .await
     }
 }
