@@ -12,6 +12,7 @@ pub use get_openrouter_model_list::*;
 
 /// 导出 backon 实现失败重试
 pub use backon::*;
+pub use reqwest::Client as HttpClient;
 pub use rig::*;
 
 #[derive(Debug, Clone)]
