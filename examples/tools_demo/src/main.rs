@@ -21,15 +21,17 @@ async fn main() {
         .get_string("bigmodel_api_key")
         .expect("Missing API Key in Settings");
 
-    let serpapi_api_key = settings
-        .get_string("serpapi_api_key")
+    let serpapi_api_keys = settings
+        .get::<Vec<String>>("serpapi_api_keys")
         .expect("Missing Serpapi API Key in Settings");
+    println!("serpapi_api_keys: {:?}", serpapi_api_keys);
+
     let client = bigmodel::Client::new(api_key.as_str());
 
     let agent = client
         .agent(BIGMODEL_GLM_4_FLASH)
         .name("ai agent")
-        .tool(SerpapiTool::new(serpapi_api_key))
+        .tool(SerpapiTool::new_with_keys(serpapi_api_keys))
         .preamble("你是一个ai助手")
         .build();
 
