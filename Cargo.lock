@@ -2337,6 +2337,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum_macros",
+ "tavily2",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -2926,6 +2927,19 @@ checksum = "8e1d1b10ced5ca923a1fcb8d03e96b8d3268065d724548c0211415ff6ac6bac4"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "tavily2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d964da7f55d197a32abf57b622a0391b1b640437eb07cf42b57d259156b20dba"
+dependencies = [
+ "rand 0.9.2",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

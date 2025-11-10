@@ -4,6 +4,7 @@ use rig_extra::completion::Prompt;
 use rig_extra::extra_providers::bigmodel;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
 use rig_extra::tools::serpapi_tool::SerpapiTool;
+use rig_extra::tools::tavily_tool::TavilyTool;
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +25,13 @@ async fn main() {
     let serpapi_api_keys = settings
         .get::<Vec<String>>("serpapi_api_keys")
         .expect("Missing Serpapi API Key in Settings");
+
+    let tavily_api_keys = settings
+        .get::<Vec<String>>("tavily_api_keys")
+        .expect("Missing Tavily API Key in Settings");
+
     println!("serpapi_api_keys: {:?}", serpapi_api_keys);
+    println!("tavily_api_keys: {:?}", tavily_api_keys);
 
     let client = bigmodel::Client::new(api_key.as_str());
 
@@ -36,5 +43,16 @@ async fn main() {
         .build();
 
     let result = agent.prompt("获取一周内AI最新动态").await.unwrap();
+    println!("{}", result);
+
+    println!("====================================================");
+    let agent2 = client
+        .agent(BIGMODEL_GLM_4_FLASH)
+        .name("ai agent")
+        .tool(TavilyTool::new_with_keys(tavily_api_keys))
+        .preamble("你是一个ai助手")
+        .build();
+
+    let result = agent2.prompt("获取一周内AI最新动态").await.unwrap();
     println!("{}", result);
 }
