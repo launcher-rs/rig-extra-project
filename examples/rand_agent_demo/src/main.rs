@@ -136,20 +136,17 @@ async fn main() -> anyhow::Result<()> {
         use rig_extra::agent_variant::AgentVariant;
         use rig_extra::streaming::StreamingPrompt;
 
-        let agent = agent_state.agent.clone();
-        let mut stream = agent.stream_prompt("写一个故事").await;
-
-        // match agent_state.agent.as_ref() {
-        //     AgentVariant::Ollama(agent) => {
-        //         let mut stream = agent.stream_prompt("写一个故事").await;
-        //         let res = stream_to_stdout(&mut stream).await?;
-        //         println!("Token usage response: {usage:?}", usage = res.usage());
-        //         println!("Final text response: {message:?}", message = res.response());
-        //     }
-        //     _ => {
-        //         println!("Streaming not implemented for this provider in the example");
-        //     }
-        // }
+        match agent_state.agent.as_ref() {
+            AgentVariant::Ollama(agent) => {
+                let mut stream = agent.stream_prompt("写一个故事").await;
+                let res = stream_to_stdout(&mut stream).await?;
+                println!("Token usage response: {usage:?}", usage = res.usage());
+                println!("Final text response: {message:?}", message = res.response());
+            }
+            _ => {
+                println!("Streaming not implemented for this provider in the example");
+            }
+        }
     }
 
     // 获取agents info

@@ -1,13 +1,10 @@
 use crate::extra_providers::bigmodel;
-use rig::agent::{Agent, StreamingPromptRequest};
+use rig::agent::{Agent};
 use rig::completion::{Message, Prompt, PromptError};
-use rig::http_client::StreamingResponse;
 use rig::providers::{
     anthropic, azure, cohere, deepseek, galadriel, gemini, groq, huggingface, hyperbolic, mira,
     mistral, moonshot, ollama, openai, openrouter, perplexity, together, xai,
 };
-use rig::streaming::{StreamingPrompt, StreamingResult};
-use rig::wasm_compat::WasmCompatSend;
 
 /// Agent 变体枚举，支持不同的 provider
 #[derive(Clone)]
@@ -34,9 +31,10 @@ pub enum AgentVariant {
     Perplexity(Agent<perplexity::CompletionModel>),
 }
 
+/// 异步调用未完成...
 impl AgentVariant {
     /// 同步调用
-    pub(crate) async fn prompt(
+    pub async fn prompt(
         &self,
         prompt: impl Into<Message> + Send,
     ) -> Result<String, PromptError> {
@@ -62,31 +60,5 @@ impl AgentVariant {
             AgentVariant::Mooshot(agent) => agent.prompt(prompt).await,
             AgentVariant::Perplexity(agent) => agent.prompt(prompt).await,
         }
-    }
-
-    /// 异步调用
-    async fn stream_prompt(&self, prompt: impl Into<Message> + WasmCompatSend) {
-        let t = match self {
-            AgentVariant::OpenAI(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::ResponsesOpenAI(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Ollama(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Bigmodel(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::OpenRouter(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Anthropic(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Cohere(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Gemini(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Huggingface(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Mistral(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Together(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::XAI(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Azure(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::DeepSeek(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Galadriel(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Groq(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Hyperbolic(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Mira(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Mooshot(agent) => agent.stream_prompt(prompt).await,
-            AgentVariant::Perplexity(agent) => agent.stream_prompt(prompt).await,
-        };
     }
 }
