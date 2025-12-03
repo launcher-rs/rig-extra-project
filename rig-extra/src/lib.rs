@@ -1,6 +1,6 @@
+pub mod agent_variant;
 pub mod error;
 pub mod extra_providers;
-mod get_openai_agent;
 mod get_openrouter_model_list;
 mod json_utils;
 pub mod rand_agent;

@@ -1,11 +1,11 @@
 use http::header;
 use reqwest::Method;
 use reqwest::header::HeaderValue;
-use rig::client::{AsEmbeddings, AsTranscription, CompletionClient, ProviderClient, ProviderValue};
+use rig::client::{CompletionClient, ProviderClient};
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::message::{MessageError, Text};
 use rig::providers::openai;
-use rig::{OneOrMany, client, completion, http_client, message};
+use rig::{OneOrMany, completion, http_client, message};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -79,6 +79,8 @@ impl Client {
 }
 
 impl ProviderClient for Client {
+    type Input = String;
+
     fn from_env() -> Self
     where
         Self: Sized,
@@ -87,26 +89,15 @@ impl ProviderClient for Client {
         Self::new(&api_key)
     }
 
-    fn from_val(input: ProviderValue) -> Self
-    where
-        Self: Sized,
-    {
-        let client::ProviderValue::Simple(api_key) = input else {
-            panic!("Incorrect provider value type")
-        };
-        Self::new(&api_key)
+    fn from_val(input: Self::Input) -> Self {
+        Self::new(&input)
     }
 }
-
-impl AsTranscription for Client {}
-
-impl AsEmbeddings for Client {}
-
 impl CompletionClient for Client {
     type CompletionModel = CompletionModel;
 
-    fn completion_model(&self, model: &str) -> Self::CompletionModel {
-        CompletionModel::new(self.clone(), model)
+    fn completion_model(&self, model: impl Into<String>) -> Self::CompletionModel {
+        CompletionModel::new(self.clone(), &model.into())
     }
 }
 
@@ -501,6 +492,11 @@ impl CompletionModel {
 impl completion::CompletionModel for CompletionModel {
     type Response = CompletionResponse;
     type StreamingResponse = openai::StreamingCompletionResponse;
+    type Client = Client;
+
+    fn make(client: &Self::Client, model: impl Into<String>) -> Self {
+        Self::new(client.clone(), &model.into())
+    }
 
     async fn completion(
         &self,

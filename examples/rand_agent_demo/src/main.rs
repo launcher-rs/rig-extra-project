@@ -3,7 +3,6 @@ use rig_extra::agent::stream_to_stdout;
 use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::rand_agent::RandAgentBuilder;
 use rig_extra::simple_rand_builder::AgentConfig;
-use rig_extra::streaming::StreamingPrompt;
 use std::sync::Arc;
 use tokio::task;
 
@@ -131,13 +130,26 @@ async fn main() -> anyhow::Result<()> {
     agent_arc.reset_failures().await;
     println!("已重置所有代理的失败计数");
 
-    // 异步调用
-    if let Some(agent) = agent_arc.get_random_valid_agent_state().await {
-        let agent = agent.agent.clone();
+    // 异步调用 - 流式提示
+    // 注意：需要从 AgentVariant 枚举中提取具体的 agent 来使用流式功能
+    if let Some(agent_state) = agent_arc.get_random_valid_agent_state().await {
+        use rig_extra::agent_variant::AgentVariant;
+        use rig_extra::streaming::StreamingPrompt;
+
+        let agent = agent_state.agent.clone();
         let mut stream = agent.stream_prompt("写一个故事").await;
-        let res = stream_to_stdout(&mut stream).await?;
-        println!("Token usage response: {usage:?}", usage = res.usage());
-        println!("Final text response: {message:?}", message = res.response());
+
+        // match agent_state.agent.as_ref() {
+        //     AgentVariant::Ollama(agent) => {
+        //         let mut stream = agent.stream_prompt("写一个故事").await;
+        //         let res = stream_to_stdout(&mut stream).await?;
+        //         println!("Token usage response: {usage:?}", usage = res.usage());
+        //         println!("Final text response: {message:?}", message = res.response());
+        //     }
+        //     _ => {
+        //         println!("Streaming not implemented for this provider in the example");
+        //     }
+        // }
     }
 
     // 获取agents info

@@ -1,6 +1,7 @@
 //! ## 多线程使用示例
 //!
 //! ```rust
+//! use rig_extra::agent_variant::AgentVariant;
 //! use rig_extra::extra_providers::{bigmodel::Client};
 //! use rig_extra::rand_agent::RandAgentBuilder;
 //! use std::sync::Arc;
@@ -14,14 +15,13 @@
 //!     //创建多个客户端
 //!     let client1 = Client::from_env();
 //!     let client2 = Client::from_env();
-//!     use rig::client::completion::CompletionClientDyn;
 //!     use rig::completion::Prompt;
 //!
 //!
 //!     let thread_safe_agent = RandAgentBuilder::new()
 //!         .max_failures(3)
-//!         .add_agent(client1.agent("glm-4-flash").build(),1, "bigmodel".to_string(), "glm-4-flash".to_string())
-//!         .add_agent(client2.agent("glm-4-flash").build(),2, "bigmodel".to_string(), "glm-4-flash".to_string())
+//!         .add_agent(AgentVariant::Bigmodel(client1.agent("glm-4-flash").build()),1, "bigmodel".to_string(), "glm-4-flash".to_string())
+//!         .add_agent(AgentVariant::Bigmodel(client2.agent("glm-4-flash").build()),2, "bigmodel".to_string(), "glm-4-flash".to_string())
 //!         .build();
 //!
 //!     let agent_arc = Arc::new(thread_safe_agent);
@@ -48,12 +48,10 @@
 //! ```
 
 use crate::AgentInfo;
+use crate::agent_variant::AgentVariant;
 use crate::error::RandAgentError;
 use backon::{ExponentialBuilder, Retryable};
 use rand::Rng;
-use rig::agent::Agent;
-use rig::client::builder::BoxAgent;
-use rig::client::completion::CompletionModelHandle;
 use rig::completion::{Message, Prompt, PromptError};
 use std::sync::Arc;
 use std::time::Duration;
@@ -75,7 +73,7 @@ pub struct RandAgent {
 #[derive(Clone)]
 pub struct AgentState {
     pub id: i32,
-    pub agent: Arc<BoxAgent<'static>>,
+    pub agent: Arc<AgentVariant>,
     pub info: AgentInfo,
 }
 
@@ -122,7 +120,7 @@ impl Prompt for RandAgent {
 
 impl AgentState {
     fn new(
-        agent: BoxAgent<'static>,
+        agent: AgentVariant,
         id: i32,
         provider: String,
         model: String,
@@ -156,13 +154,13 @@ impl AgentState {
 
 impl RandAgent {
     /// 创建新的线程安全 RandAgent
-    pub fn new(agents: Vec<(BoxAgent<'static>, i32, String, String)>) -> Self {
+    pub fn new(agents: Vec<(AgentVariant, i32, String, String)>) -> Self {
         Self::with_max_failures_and_callback(agents, 3, None)
     }
 
     /// 使用自定义最大失败次数和回调创建线程安全 RandAgent
     pub fn with_max_failures_and_callback(
-        agents: Vec<(BoxAgent<'static>, i32, String, String)>,
+        agents: Vec<(AgentVariant, i32, String, String)>,
         max_failures: u32,
         on_agent_invalid: OnAgentInvalidCallback,
     ) -> Self {
@@ -180,7 +178,7 @@ impl RandAgent {
 
     /// 使用自定义最大失败次数创建线程安全 RandAgent
     pub fn with_max_failures(
-        agents: Vec<(BoxAgent<'static>, i32, String, String)>,
+        agents: Vec<(AgentVariant, i32, String, String)>,
         max_failures: u32,
     ) -> Self {
         Self::with_max_failures_and_callback(agents, max_failures, None)
@@ -195,13 +193,7 @@ impl RandAgent {
     }
 
     /// 添加代理到集合中
-    pub async fn add_agent(
-        &self,
-        agent: BoxAgent<'static>,
-        id: i32,
-        provider: String,
-        model: String,
-    ) {
+    pub async fn add_agent(&self, agent: AgentVariant, id: i32, provider: String, model: String) {
         let mut agents = self.agents.lock().await;
         agents.push(AgentState::new(agent, id, provider, model, 3));
     }
@@ -209,7 +201,7 @@ impl RandAgent {
     /// 使用自定义最大失败次数添加代理
     pub async fn add_agent_with_max_failures(
         &self,
-        agent: BoxAgent<'static>,
+        agent: AgentVariant,
         id: i32,
         provider: String,
         model: String,
@@ -434,7 +426,7 @@ impl RandAgent {
 
 /// 线程安全 RandAgent 的构建器
 pub struct RandAgentBuilder {
-    pub(crate) agents: Vec<(BoxAgent<'static>, i32, String, String)>,
+    pub(crate) agents: Vec<(AgentVariant, i32, String, String)>,
     max_failures: u32,
     on_agent_invalid: OnAgentInvalidCallback,
 }
@@ -467,39 +459,17 @@ impl RandAgentBuilder {
     /// 添加代理到构建器
     ///
     /// # 参数
-    /// - agent: 代理实例（需要是 'static 生命周期）
+    /// - agent: 代理实例（AgentVariant 枚举）
     /// - provider_name: 提供方名称（如 openai、bigmodel 等）
     /// - model_name: 模型名称（如 gpt-3.5、glm-4-flash 等）
     pub fn add_agent(
         mut self,
-        agent: BoxAgent<'static>,
+        agent: AgentVariant,
         id: i32,
         provider_name: String,
         model_name: String,
     ) -> Self {
         self.agents.push((agent, id, provider_name, model_name));
-        self
-    }
-
-    /// 从 AgentBuilder 添加代理
-    ///
-    /// # 参数
-    /// - builder: AgentBuilder 实例（需要是 'static 生命周期）
-    /// - provider_name: 提供方名称（如 openai、bigmodel 等）
-    /// - model_name: 模型名称（如 gpt-3.5、glm-4-flash 等）
-    pub fn add_builder(
-        mut self,
-        builder: Agent<CompletionModelHandle<'static>>,
-        id: i32,
-        provider_name: &str,
-        model_name: &str,
-    ) -> Self {
-        self.agents.push((
-            builder,
-            id,
-            provider_name.to_string(),
-            model_name.to_string(),
-        ));
         self
     }
 

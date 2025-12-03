@@ -1,4 +1,4 @@
-use rig_extra::client::completion::CompletionClientDyn;
+use rig_extra::agent_variant::AgentVariant;
 use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::providers::ollama;
 use rig_extra::rand_agent::RandAgentBuilder;
@@ -13,7 +13,12 @@ async fn main() -> anyhow::Result<()> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
-    let ollama_client = ollama::Client::new();
+    use rig_extra::client::CompletionClient;
+    use rig_extra::client::Nothing;
+    let ollama_client = ollama::Client::builder()
+        .api_key(Nothing)
+        .build()
+        .expect("Failed to create Ollama client");
 
     // 普通调用
     let agent = ollama_client.agent("qwen2.5:14b").build();
@@ -58,10 +63,18 @@ async fn main() -> anyhow::Result<()> {
 
     let agent1 = ollama_client.agent("qwen2.5:14b").build();
     let agent2 = ollama_client.agent("qwen2.5:14b").build();
-    let rand_agent_builder =
-        rand_agent_builder.add_agent(agent1, 1, "ollama".to_string(), "qwen2.5:14b".to_string());
-    let rand_agent_builder =
-        rand_agent_builder.add_agent(agent2, 2, "ollama".to_string(), "qwen2.5:14b".to_string());
+    let rand_agent_builder = rand_agent_builder.add_agent(
+        AgentVariant::Ollama(agent1),
+        1,
+        "ollama".to_string(),
+        "qwen2.5:14b".to_string(),
+    );
+    let rand_agent_builder = rand_agent_builder.add_agent(
+        AgentVariant::Ollama(agent2),
+        2,
+        "ollama".to_string(),
+        "qwen2.5:14b".to_string(),
+    );
     let thread_safe_agent = rand_agent_builder.build();
     println!("rand_agent 请求........");
     let result = thread_safe_agent
