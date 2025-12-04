@@ -1,17 +1,19 @@
 use config::Config;
-use rig_extra::agent::stream_to_stdout;
+use futures::StreamExt;
+use rig_extra::agent::{MultiTurnStreamItem, Text};
 use rig_extra::completion::{Prompt, PromptError};
 use rig_extra::rand_agent::RandAgentBuilder;
 use rig_extra::simple_rand_builder::AgentConfig;
+use rig_extra::streaming::StreamedAssistantContent;
 use std::sync::Arc;
 use tokio::task;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 设置日志
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
+    // tracing_subscriber::fmt()
+    //     .with_max_level(tracing::Level::INFO)
+    //     .init();
 
     // 1. 读取配置
     let settings = Config::builder()
@@ -133,20 +135,61 @@ async fn main() -> anyhow::Result<()> {
     // 异步调用 - 流式提示
     // 注意：需要从 AgentVariant 枚举中提取具体的 agent 来使用流式功能
     if let Some(agent_state) = agent_arc.get_random_valid_agent_state().await {
-        use rig_extra::agent_variant::AgentVariant;
-        use rig_extra::streaming::StreamingPrompt;
+        println!("\n=== 流式调用示例 ===");
+        println!(
+            "使用 Agent ID: {}, Provider: {}, Model: {}",
+            agent_state.id, agent_state.info.provider, agent_state.info.model
+        );
 
-        match agent_state.agent.as_ref() {
-            AgentVariant::Ollama(agent) => {
-                let mut stream = agent.stream_prompt("写一个故事").await;
-                let res = stream_to_stdout(&mut stream).await?;
-                println!("Token usage response: {usage:?}", usage = res.usage());
-                println!("Final text response: {message:?}", message = res.response());
+        // 使用 AgentVariant 的 stream_prompt 方法
+        // 使用 serde_json::Value 作为通用响应类型
+        match agent_state
+            .agent
+            .stream_prompt::<serde_json::Value>("请简单介绍一下你自己")
+            .await
+        {
+            Ok(mut stream) => {
+                println!("开始流式响应:");
+
+                // 手动处理流
+                while let Some(item) = stream.next().await {
+                    match item {
+                        // Ok(multi_item) => {
+                        //     // MultiTurnStreamItem 是一个结构体，包含响应数据
+                        //     // 由于我们使用 serde_json::Value，可以直接序列化查看内容
+                        //     if let Ok(item_json) = serde_json::to_string_pretty(&multi_item) {
+                        //         println!("收到流项:\n{}", item_json);
+                        //     } else {
+                        //         println!("收到流项: {:?}", multi_item);
+                        //     }
+                        // }
+                        Ok(MultiTurnStreamItem::StreamAssistantItem(
+                            StreamedAssistantContent::Text(Text { text }),
+                        )) => {
+                            print!("{text}");
+                        }
+
+                        Ok(MultiTurnStreamItem::StreamAssistantItem(
+                            StreamedAssistantContent::Reasoning(_reasoning),
+                        )) => {}
+
+                        Ok(MultiTurnStreamItem::FinalResponse(_r)) => {}
+
+                        Err(e) => {
+                            println!("\n流处理错误: {}", e);
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                println!("\n流式响应完成");
             }
-            _ => {
-                println!("Streaming not implemented for this provider in the example");
+            Err(e) => {
+                println!("创建流失败: {}", e);
             }
         }
+    } else {
+        println!("没有可用的有效代理进行流式调用");
     }
 
     // 获取agents info

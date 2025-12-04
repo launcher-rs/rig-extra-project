@@ -9,4 +9,7 @@ pub enum RandAgentError {
     AgentError(#[from] Box<dyn std::error::Error + Send + Sync>),
     #[error("PromptError error: {0}")]
     PromptError(#[from] PromptError),
+
+    #[error("Stream conversion error: {0}")]
+    Custom(String),
 }
