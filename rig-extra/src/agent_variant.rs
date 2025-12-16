@@ -3,7 +3,7 @@ use serde::de::DeserializeOwned;
 use std::pin::Pin;
 
 use rig::agent::{Agent, MultiTurnStreamItem};
-use rig::completion::{Message, Prompt, PromptError};
+use rig::completion::{CompletionError, Message, Prompt, PromptError};
 use rig::providers::{
     anthropic, azure, cohere, deepseek, galadriel, gemini, groq, huggingface, hyperbolic, mira,
     mistral, moonshot, ollama, openai, openrouter, perplexity, together, xai,
@@ -52,28 +52,25 @@ where
 {
     Box::pin(stream.map(move |item| {
         item.map_err(|e| {
-            // Convert error to string and create PromptError
-            let error_msg = format!("stream error: {}", e);
-            PromptError::MaxDepthError {
-                max_depth: 0,
-                chat_history: Box::new(vec![]),
-                prompt: error_msg.into(),
-            }
+            // 将底层 provider 错误包装成统一的 CompletionError::ProviderError
+            PromptError::CompletionError(CompletionError::ProviderError(e.to_string()))
         })
         .and_then(|multi_item| {
             // Convert MultiTurnStreamItem<SR> to MultiTurnStreamItem<R>
             // by serializing and deserializing the whole item
             serde_json::to_value(&multi_item)
-                .map_err(|e| PromptError::MaxDepthError {
-                    max_depth: 0,
-                    chat_history: Box::new(vec![]),
-                    prompt: format!("serialization error: {}", e).into(),
+                .map_err(|e| {
+                    PromptError::CompletionError(CompletionError::ProviderError(format!(
+                        "serialization error: {}",
+                        e
+                    )))
                 })
                 .and_then(|val| {
-                    serde_json::from_value(val).map_err(|e| PromptError::MaxDepthError {
-                        max_depth: 0,
-                        chat_history: Box::new(vec![]),
-                        prompt: format!("deserialization error: {}", e).into(),
+                    serde_json::from_value(val).map_err(|e| {
+                        PromptError::CompletionError(CompletionError::ProviderError(format!(
+                            "deserialization error: {}",
+                            e
+                        )))
                     })
                 })
         })

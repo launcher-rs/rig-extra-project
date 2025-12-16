@@ -52,7 +52,7 @@ use crate::agent_variant::AgentVariant;
 use crate::error::RandAgentError;
 use backon::{ExponentialBuilder, Retryable};
 use rand::Rng;
-use rig::completion::{Message, Prompt, PromptError};
+use rig::completion::{CompletionError, Message, Prompt, PromptError};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -84,11 +84,7 @@ impl Prompt for RandAgent {
         let agent_index =
             self.get_random_valid_agent_index()
                 .await
-                .ok_or(PromptError::MaxDepthError {
-                    max_depth: 0,
-                    chat_history: Box::new(vec![]),
-                    prompt: "没有有效agent".into(),
-                })?;
+                .ok_or(CompletionError::ProviderError("没有有效agent".to_string()))?;
 
         // 第二步：加锁并获取可变引用
         let mut agents = self.agents.lock().await;
@@ -361,11 +357,7 @@ impl RandAgent {
         let agent_index =
             self.get_random_valid_agent_index()
                 .await
-                .ok_or(PromptError::MaxDepthError {
-                    max_depth: 0,
-                    chat_history: Box::new(vec![]),
-                    prompt: "没有有效agent".into(),
-                })?;
+                .ok_or(CompletionError::ProviderError("没有有效agent".to_string()))?;
 
         // 第二步：加锁并获取可变引用
         let mut agents = self.agents.lock().await;

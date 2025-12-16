@@ -1,6 +1,4 @@
-use http::header;
-use reqwest::Method;
-use reqwest::header::HeaderValue;
+use http::{header, HeaderValue, Method};
 use rig::client::{CompletionClient, ProviderClient};
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::message::{MessageError, Text};
