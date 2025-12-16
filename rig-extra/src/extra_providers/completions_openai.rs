@@ -9,13 +9,11 @@ use serde::{Deserialize, Serialize};
 
 /// 获取openai client
 pub fn get_completions_openai_client(base_url: &str, api_key: &str) -> Client<HttpClient> {
-    let client = providers::openai::Client::builder()
+    providers::openai::Client::builder()
         .base_url(base_url)
         .api_key(api_key)
         .build()
-        .unwrap();
-
-    client
+        .unwrap()
 }
 
 /// 获取 openai agent builder
@@ -25,11 +23,11 @@ pub fn get_completions_openai_agent_builder(
     model_name: &str,
 ) -> AgentBuilder<CompletionModel> {
     let client = get_completions_openai_client(base_url, api_key);
-    let agent_builder = client
+
+    client
         .completion_model(model_name)
         .completions_api()
-        .into_agent_builder();
-    agent_builder
+        .into_agent_builder()
 }
 
 /// 获取 openai extractor builder
@@ -42,6 +40,6 @@ where
     U: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync,
 {
     let client = get_completions_openai_client(base_url, api_key);
-    let extractor_builder = client.completions_api().extractor::<U>(model_name);
-    extractor_builder
+
+    client.completions_api().extractor::<U>(model_name)
 }

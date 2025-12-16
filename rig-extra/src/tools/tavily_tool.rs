@@ -25,7 +25,7 @@ impl TavilyTool {
 
     /// 多个api
     pub fn new_with_keys<S: Into<String>>(api_key: Vec<S>) -> Self {
-        if api_key.len() == 0 {
+        if api_key.is_empty() {
             panic!("Api key should be greater than 0");
         }
         Self {
