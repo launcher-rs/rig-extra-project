@@ -1,4 +1,4 @@
-use http::{header, HeaderValue, Method};
+use http::{HeaderValue, Method, header};
 use rig::client::{CompletionClient, ProviderClient};
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::message::{MessageError, Text};
