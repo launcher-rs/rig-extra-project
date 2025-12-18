@@ -1,13 +1,17 @@
 use config::Config;
+use reqwest::header::{AUTHORIZATION, HeaderValue};
 use rig_extra::completion::Prompt;
 use rig_extra::extra_providers;
 
 use rig_extra::client::CompletionClient;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_5_FLASH;
+use rig_extra::http_client::HeaderMap;
 use rmcp::{
     ServiceExt,
     model::{ClientCapabilities, ClientInfo, Implementation},
-    transport::SseClientTransport,
+    transport::{
+        StreamableHttpClientTransport, streamable_http_client::StreamableHttpClientTransportConfig,
+    },
 };
 
 #[tokio::main]
@@ -30,21 +34,35 @@ async fn main() {
         .get_string("mcp_addr")
         .expect("Missing mcp_addr in Settings");
 
+    let mcp_token = settings
+        .get_string("mcp_token")
+        .expect("Missing MCP Token in Settings");
+
     // 传输层
     // start需要 transport-sse-client-reqwest features
-    let transport = SseClientTransport::start(mcp_addr)
-        .await
-        .expect("不能连接MCP服务器");
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", mcp_token))
+            .expect("failed to build Authorization header"),
+    );
+
+    let http_client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .expect("failed to build reqwest client");
+    let transport = StreamableHttpClientTransport::with_client(
+        http_client,
+        StreamableHttpClientTransportConfig::with_uri(mcp_addr),
+    );
 
     let client_info = ClientInfo {
         protocol_version: Default::default(),
         capabilities: ClientCapabilities::default(),
         client_info: Implementation {
-            name: "test sse client".to_string(),
-            title: None,
-            version: "0.0.1".to_string(),
-            icons: None,
-            website_url: None,
+            name: "rig-extra client".to_string(),
+            version: "0.0.2".to_string(),
+            ..Default::default()
         },
     };
 
