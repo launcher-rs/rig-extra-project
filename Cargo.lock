@@ -2504,9 +2504,9 @@ dependencies = [
 
 [[package]]
 name = "rig-core"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b1a48121c1ecd6f6ce59d64ec353c791aac6fc07bf4aa353380e8185659e6eb"
+checksum = "7207790134ee24d87ac3d022c308e1a7c871219d139acf70d13be76c1f6919c5"
 dependencies = [
  "as-any",
  "async-stream",
@@ -2559,7 +2559,7 @@ dependencies = [
 
 [[package]]
 name = "rig-extra"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "backon",
  "chrono",
@@ -2597,9 +2597,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "528d42f8176e6e5e71ea69182b17d1d0a19a6b3b894b564678b74cd7cab13cfa"
+checksum = "d1815dbc06c414d720f8bc1951eccd66bc99efc6376331f1e7093a119b3eb508"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2626,9 +2626,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp-macros"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3f81daaa494eb8e985c9462f7d6ce1ab05e5299f48aafd76cdd3d8b060e6f59"
+checksum = "11f0bc7008fa102e771a76c6d2c9b253be3f2baa5964e060464d038ae1cbc573"
 dependencies = [
  "darling",
  "proc-macro2",

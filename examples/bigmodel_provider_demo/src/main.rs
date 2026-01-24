@@ -3,7 +3,7 @@ use rig_extra::agent::stream_to_stdout;
 use rig_extra::client::CompletionClient;
 use rig_extra::completion::{Prompt, ToolDefinition};
 use rig_extra::extra_providers::bigmodel;
-use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
+use rig_extra::extra_providers::bigmodel::{BIGMODEL_GLM_4_7_FLASH, BIGMODEL_GLM_4_FLASH};
 use rig_extra::streaming::StreamingPrompt;
 use rig_extra::tool::Tool;
 use schemars::JsonSchema;
@@ -89,7 +89,7 @@ async fn main() {
     let client = bigmodel::Client::new(api_key.as_str());
 
     let agent = client
-        .agent(BIGMODEL_GLM_4_FLASH)
+        .agent(BIGMODEL_GLM_4_7_FLASH)
         .preamble("你是一个ai助手")
         .build();
 

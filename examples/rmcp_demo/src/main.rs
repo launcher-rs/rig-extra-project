@@ -4,7 +4,7 @@ use rig_extra::completion::Prompt;
 use rig_extra::extra_providers;
 
 use rig_extra::client::CompletionClient;
-use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_5_FLASH;
+use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_7_FLASH;
 use rig_extra::http_client::HeaderMap;
 use rmcp::{
     ServiceExt,
@@ -86,7 +86,7 @@ async fn main() {
     let llm_client = extra_providers::bigmodel::Client::new(api_key.as_str());
 
     let agent = llm_client
-        .agent(BIGMODEL_GLM_4_5_FLASH)
+        .agent(BIGMODEL_GLM_4_7_FLASH)
         .rmcp_tools(all_tools, client.peer().to_owned())
         .preamble("你是一个ai助手")
         .build();

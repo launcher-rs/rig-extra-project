@@ -115,7 +115,10 @@ enum ApiResponse<T> {
 // Bigmodel Completion API
 // ================================================================
 pub const BIGMODEL_GLM_4_FLASH: &str = "glm-4-flash";
+
+#[deprecated(note = "GLM-4.5-Flash 将于2026年1月30日下线")]
 pub const BIGMODEL_GLM_4_5_FLASH: &str = "glm-4.5-flash";
+pub const BIGMODEL_GLM_4_7_FLASH: &str = "glm-4.7-flash";
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
