@@ -177,11 +177,11 @@ impl Tool for GithubTrendingTool {
 mod tests {
     use super::*;
 
+    use crate::extra_providers::bigmodel;
+    use crate::extra_providers::bigmodel::BIGMODEL_GLM_4_7_FLASH;
     use config::Config;
     use rig::client::CompletionClient;
     use rig::completion::Prompt;
-    use crate::extra_providers::bigmodel;
-    use crate::extra_providers::bigmodel::BIGMODEL_GLM_4_7_FLASH;
 
     #[tokio::test]
     async fn test_github_trending() {
@@ -196,7 +196,7 @@ mod tests {
             .get_string("bigmodel_api_key")
             .expect("Missing API Key in Settings");
 
-        let client:bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
+        let client: bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
         let agent = client
             .agent(BIGMODEL_GLM_4_7_FLASH)
             .tool(GithubTrendingTool)

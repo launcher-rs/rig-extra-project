@@ -1,10 +1,10 @@
 use crate::agent_variant::AgentVariant;
+use crate::extra_providers::bigmodel;
 use crate::rand_agent::RandAgentBuilder;
 use rig::client::CompletionClient;
 use rig::providers::*;
 use serde::{Deserialize, Serialize};
 use strum_macros::Display;
-use crate::extra_providers::bigmodel;
 
 #[derive(Debug, Display, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -447,7 +447,7 @@ impl RandAgentBuilder {
                     Err(err) => {
                         tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
                     }
-                }
+                },
             }
         }
         self

@@ -1,18 +1,20 @@
+use crate::json_utils;
+use crate::json_utils::merge;
 use bytes::Bytes;
-use rig::{client, completion, http_client, message, OneOrMany};
 use rig::agent::Text;
-use rig::client::{BearerAuth, Capabilities, Capable, DebugExt, Nothing, Provider, ProviderBuilder};
+use rig::client::{
+    BearerAuth, Capabilities, Capable, DebugExt, Nothing, Provider, ProviderBuilder,
+};
 use rig::completion::{CompletionError, CompletionRequest};
 use rig::http_client::HttpClientExt;
 use rig::message::MessageError;
 use rig::providers::openai;
 use rig::providers::openai::send_compatible_streaming_request;
 use rig::streaming::StreamingCompletionResponse;
+use rig::{OneOrMany, client, completion, http_client, message};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use tracing::{info_span, Instrument};
-use crate::json_utils;
-use crate::json_utils::merge;
+use serde_json::{Value, json};
+use tracing::{Instrument, info_span};
 
 // use rig::providers::openai::{Message as OpenAIMessage};
 
@@ -21,14 +23,11 @@ const BIGMODEL_API_BASE_URL: &str = "https://open.bigmodel.cn/api/paas/v4/";
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BigmodelExt;
 
-
 #[derive(Debug, Default, Clone, Copy)]
 
 pub struct BigmodelBuilder;
 
 type BigmodelApiKey = BearerAuth;
-
-
 
 #[derive(Clone, Debug)]
 pub struct CompletionModel<T = reqwest::Client> {
@@ -111,15 +110,19 @@ impl<T> CompletionModel<T> {
 
         Ok(request)
     }
-
 }
-
 
 impl Provider for BigmodelExt {
     const VERIFY_PATH: &'static str = "api/tags";
     type Builder = BigmodelBuilder;
 
-    fn build<H>(_builder: &client::ClientBuilder<Self::Builder, <Self::Builder as ProviderBuilder>::ApiKey, H>) -> rig::http_client::Result<Self> {
+    fn build<H>(
+        _builder: &client::ClientBuilder<
+            Self::Builder,
+            <Self::Builder as ProviderBuilder>::ApiKey,
+            H,
+        >,
+    ) -> rig::http_client::Result<Self> {
         Ok(Self)
     }
 }
@@ -139,13 +142,11 @@ impl<H> Capabilities<H> for BigmodelExt {
 
 impl DebugExt for BigmodelExt {}
 
-
 impl ProviderBuilder for BigmodelBuilder {
     type Output = BigmodelExt;
     type ApiKey = BigmodelApiKey;
     const BASE_URL: &'static str = BIGMODEL_API_BASE_URL;
 }
-
 
 pub type Client<H = reqwest::Client> = client::Client<BigmodelExt, H>;
 pub type ClientBuilder<H = reqwest::Client> = client::ClientBuilder<BigmodelBuilder, String, H>;
@@ -163,7 +164,6 @@ pub type ClientBuilder<H = reqwest::Client> = client::ClientBuilder<BigmodelBuil
 //         Self::new(&input).unwrap()
 //     }
 // }
-
 
 // ---------- API Error and Response Structures ----------
 #[derive(Debug, Deserialize)]
@@ -183,7 +183,6 @@ enum ApiResponse<T> {
 // ================================================================
 
 pub const BIGMODEL_GLM_4_7_FLASH: &str = "glm-4.7-flash";
-
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -379,8 +378,12 @@ pub struct Choice {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Usage {
-    pub prompt_tokens: usize,
-    pub total_tokens: usize,
+    #[serde(rename = "completion_tokens")]
+    pub completion_tokens: i64,
+    #[serde(rename = "prompt_tokens")]
+    pub prompt_tokens: i64,
+    #[serde(rename = "total_tokens")]
+    pub total_tokens: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_tokens_details: Option<PromptTokensDetails>,
 }
@@ -475,8 +478,6 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
     }
 }
 
-
-
 // 函数定义
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -494,10 +495,6 @@ pub struct Function {
     pub parameters: serde_json::Value,
 }
 
-
-
-
-
 /// 同步请求
 impl<T> completion::CompletionModel for CompletionModel<T>
 where
@@ -508,10 +505,13 @@ where
     type Client = Client<T>;
 
     fn make(client: &Self::Client, model: impl Into<String>) -> Self {
-        Self::new(client.clone(), &model.into())
+        Self::new(client.clone(), model.into())
     }
 
-    async fn completion(&self, completion_request: CompletionRequest) -> Result<completion::CompletionResponse<Self::Response>, CompletionError> {
+    async fn completion(
+        &self,
+        completion_request: CompletionRequest,
+    ) -> Result<completion::CompletionResponse<Self::Response>, CompletionError> {
         let span = if tracing::Span::current().is_disabled() {
             info_span!(
                 target: "rig::completions",
@@ -551,6 +551,13 @@ where
             let response = self.client.send::<_, Bytes>(req).await?;
             let status = response.status();
             let response_body = response.into_body().into_future().await?.to_vec();
+
+            let tt = response_body.clone();
+            let response = serde_json::from_slice::<serde_json::Value>(&tt)?;
+            println!(
+                "response:\r\n {}",
+                serde_json::to_string_pretty(&response).unwrap()
+            );
 
             if status.is_success() {
                 match serde_json::from_slice::<ApiResponse<CompletionResponse>>(&response_body)? {
@@ -599,8 +606,8 @@ where
 
         let body = serde_json::to_vec(&request)?;
 
-
-        let req = self.client
+        let req = self
+            .client
             .post("/chat/completions")?
             .body(body)
             .map_err(|e| http_client::Error::Instance(e.into()))?;
@@ -628,6 +635,4 @@ where
             .instrument(span)
             .await
     }
-
-
 }

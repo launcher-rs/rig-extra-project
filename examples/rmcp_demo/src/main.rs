@@ -3,6 +3,7 @@ use reqwest::header::{AUTHORIZATION, HeaderValue};
 use rig_extra::completion::Prompt;
 
 use rig_extra::client::CompletionClient;
+use rig_extra::extra_providers::bigmodel;
 use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_7_FLASH;
 use rig_extra::http_client::HeaderMap;
 use rmcp::{
@@ -12,7 +13,6 @@ use rmcp::{
         StreamableHttpClientTransport, streamable_http_client::StreamableHttpClientTransportConfig,
     },
 };
-use rig_extra::extra_providers::bigmodel;
 
 #[tokio::main]
 async fn main() {
@@ -83,7 +83,7 @@ async fn main() {
     // 索取所有工具
     let all_tools = client.list_all_tools().await.unwrap();
 
-    let llm_client:bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
+    let llm_client: bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
 
     let agent = llm_client
         .agent(BIGMODEL_GLM_4_7_FLASH)

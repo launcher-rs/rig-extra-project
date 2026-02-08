@@ -3,7 +3,7 @@ use rig_extra::agent::stream_to_stdout;
 use rig_extra::client::CompletionClient;
 use rig_extra::completion::{Prompt, ToolDefinition};
 use rig_extra::extra_providers::bigmodel;
-use rig_extra::extra_providers::bigmodel::{BIGMODEL_GLM_4_7_FLASH};
+use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_7_FLASH;
 use rig_extra::streaming::StreamingPrompt;
 use rig_extra::tool::Tool;
 use schemars::JsonSchema;
@@ -86,7 +86,7 @@ async fn main() {
         .get_string("bigmodel_api_key")
         .expect("Missing API Key in Settings");
 
-    let client:bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
+    let client: bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
 
     let agent = client
         .agent(BIGMODEL_GLM_4_7_FLASH)

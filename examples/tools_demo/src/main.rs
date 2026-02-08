@@ -33,7 +33,7 @@ async fn main() {
     println!("serpapi_api_keys: {:?}", serpapi_api_keys);
     println!("tavily_api_keys: {:?}", tavily_api_keys);
 
-    let client:bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
+    let client: bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
 
     let agent = client
         .agent(BIGMODEL_GLM_4_7_FLASH)
