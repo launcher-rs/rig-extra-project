@@ -3,7 +3,7 @@ use rig_extra::agent::stream_to_stdout;
 use rig_extra::client::CompletionClient;
 use rig_extra::completion::{Prompt, ToolDefinition};
 use rig_extra::extra_providers::bigmodel;
-use rig_extra::extra_providers::bigmodel::{BIGMODEL_GLM_4_7_FLASH, BIGMODEL_GLM_4_FLASH};
+use rig_extra::extra_providers::bigmodel::{BIGMODEL_GLM_4_7_FLASH};
 use rig_extra::streaming::StreamingPrompt;
 use rig_extra::tool::Tool;
 use schemars::JsonSchema;
@@ -86,7 +86,7 @@ async fn main() {
         .get_string("bigmodel_api_key")
         .expect("Missing API Key in Settings");
 
-    let client = bigmodel::Client::new(api_key.as_str());
+    let client:bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
 
     let agent = client
         .agent(BIGMODEL_GLM_4_7_FLASH)
@@ -107,7 +107,7 @@ async fn main() {
 
     tracing::info!("工具调用==============");
     let tool_agent = client
-        .agent(BIGMODEL_GLM_4_FLASH)
+        .agent(BIGMODEL_GLM_4_7_FLASH)
         .preamble("你是一个ai助手")
         .tool(Adder)
         .build();
@@ -117,7 +117,7 @@ async fn main() {
     let response = tool_agent
         .prompt("计算5+8=,然后在加12是多少")
         // 设置多轮对话的最大深度
-        .multi_turn(10)
+        // .multi_turn(10)
         // .prompt("计算5+8是多少")
         .await
         .unwrap();
@@ -134,7 +134,7 @@ async fn main() {
     // 提取
     tracing::info!("Extracting...:");
     // let data_extractor = client.extractor::<Person>(BIGMODEL_GLM_4_FLASH).build();
-    let data_extractor = client.extractor::<Person>(BIGMODEL_GLM_4_FLASH).build();
+    let data_extractor = client.extractor::<Person>(BIGMODEL_GLM_4_7_FLASH).build();
 
     let person = data_extractor
         .extract("Hello my name is John Doe! I am a software engineer.")

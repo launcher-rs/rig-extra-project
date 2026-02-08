@@ -2,7 +2,7 @@
 //!
 //! ```rust
 //! use rig_extra::agent_variant::AgentVariant;
-//! use rig_extra::extra_providers::{bigmodel::Client};
+//! use rig_extra::extra_providers::{bigmodel_old::Client};
 //! use rig_extra::rand_agent::RandAgentBuilder;
 //! use std::sync::Arc;
 //! use tokio::task;

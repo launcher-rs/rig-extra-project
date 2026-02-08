@@ -1,11 +1,10 @@
 use crate::agent_variant::AgentVariant;
-use crate::extra_providers::bigmodel;
 use crate::rand_agent::RandAgentBuilder;
-use rig::agent::AgentBuilder;
 use rig::client::CompletionClient;
 use rig::providers::*;
 use serde::{Deserialize, Serialize};
 use strum_macros::Display;
+use crate::extra_providers::bigmodel;
 
 #[derive(Debug, Display, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -431,23 +430,23 @@ impl RandAgentBuilder {
                         tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
                     }
                 },
-                ProviderEnum::Bigmodel => {
-                    let client = if let Some(api_base_url) = agent_conf.api_base_url {
-                        bigmodel::Client::from_url(&agent_conf.api_key, &api_base_url)
-                    } else {
-                        bigmodel::Client::new(&agent_conf.api_key)
-                    };
-                    let model = client.completion_model(&agent_conf.model_name);
-                    let agent = AgentBuilder::new(model)
-                        .name(agent_name.as_str())
-                        .preamble(&system_prompt)
-                        .build();
-                    self.agents.push((
-                        AgentVariant::Bigmodel(agent),
-                        agent_conf.id,
-                        agent_conf.provider.to_string(),
-                        agent_conf.model_name,
-                    ));
+                ProviderEnum::Bigmodel => match bigmodel::Client::new(&agent_conf.api_key) {
+                    Ok(client) => {
+                        let agent = client
+                            .agent(&agent_conf.model_name)
+                            .name(agent_name.as_str())
+                            .preamble(&system_prompt)
+                            .build();
+                        self.agents.push((
+                            AgentVariant::Bigmodel(agent),
+                            agent_conf.id,
+                            agent_conf.provider.to_string(),
+                            agent_conf.model_name,
+                        ));
+                    }
+                    Err(err) => {
+                        tracing::error!("添加 {} 错误: {}", agent_conf.provider, err);
+                    }
                 }
             }
         }

@@ -2,7 +2,7 @@ use config::Config;
 use rig_extra::client::CompletionClient;
 use rig_extra::completion::Prompt;
 use rig_extra::extra_providers::bigmodel;
-use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_FLASH;
+use rig_extra::extra_providers::bigmodel::BIGMODEL_GLM_4_7_FLASH;
 use rig_extra::tools::serpapi_tool::SerpapiTool;
 use rig_extra::tools::tavily_tool::TavilyTool;
 
@@ -33,10 +33,10 @@ async fn main() {
     println!("serpapi_api_keys: {:?}", serpapi_api_keys);
     println!("tavily_api_keys: {:?}", tavily_api_keys);
 
-    let client = bigmodel::Client::new(api_key.as_str());
+    let client:bigmodel::Client = bigmodel::Client::new(api_key.as_str()).unwrap();
 
     let agent = client
-        .agent(BIGMODEL_GLM_4_FLASH)
+        .agent(BIGMODEL_GLM_4_7_FLASH)
         .name("ai agent")
         .tool(SerpapiTool::new_with_keys(serpapi_api_keys))
         .preamble("你是一个ai助手")
@@ -47,7 +47,7 @@ async fn main() {
 
     println!("====================================================");
     let agent2 = client
-        .agent(BIGMODEL_GLM_4_FLASH)
+        .agent(BIGMODEL_GLM_4_7_FLASH)
         .name("ai agent")
         .tool(TavilyTool::new_with_keys(tavily_api_keys))
         .preamble("你是一个ai助手")

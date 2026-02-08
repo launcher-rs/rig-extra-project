@@ -1,104 +1,171 @@
-use http::{HeaderValue, Method, header};
-use rig::client::{CompletionClient, ProviderClient};
+use bytes::Bytes;
+use rig::{client, completion, http_client, message, OneOrMany};
+use rig::agent::Text;
+use rig::client::{BearerAuth, Capabilities, Capable, DebugExt, Nothing, Provider, ProviderBuilder};
 use rig::completion::{CompletionError, CompletionRequest};
-use rig::message::{MessageError, Text};
+use rig::http_client::HttpClientExt;
+use rig::message::MessageError;
 use rig::providers::openai;
-use rig::{OneOrMany, completion, http_client, message};
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-
-use crate::json_utils;
-use crate::json_utils::merge;
 use rig::providers::openai::send_compatible_streaming_request;
 use rig::streaming::StreamingCompletionResponse;
-use tracing::{Instrument, info_span};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use tracing::{info_span, Instrument};
+use crate::json_utils;
+use crate::json_utils::merge;
 
-// ================================================================
-// BIGMODEL 客户端
-// ================================================================
+// use rig::providers::openai::{Message as OpenAIMessage};
+
 const BIGMODEL_API_BASE_URL: &str = "https://open.bigmodel.cn/api/paas/v4/";
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BigmodelExt;
+
+
+#[derive(Debug, Default, Clone, Copy)]
+
+pub struct BigmodelBuilder;
+
+type BigmodelApiKey = BearerAuth;
+
+
+
 #[derive(Clone, Debug)]
-pub struct Client {
-    api_key: String,
-    base_url: String,
-    default_headers: http_client::HeaderMap,
-    http_client: reqwest::Client,
+pub struct CompletionModel<T = reqwest::Client> {
+    client: Client<T>,
+    pub model: String,
 }
 
-impl Client {
-    pub fn new(api_key: &str) -> Self {
-        Self::from_url(api_key, BIGMODEL_API_BASE_URL)
-    }
-
-    pub fn from_url(api_key: &str, base_url: &str) -> Self {
-        let mut default_headers = reqwest::header::HeaderMap::new();
-        default_headers.insert(
-            reqwest::header::CONTENT_TYPE,
-            "application/json".parse().unwrap(),
-        );
-
+impl<T> CompletionModel<T> {
+    pub fn new(client: Client<T>, model: impl Into<String>) -> Self {
         Self {
-            api_key: api_key.to_string(),
-            base_url: base_url.to_string(),
-            default_headers,
-            http_client: reqwest::Client::builder()
-                .default_headers({
-                    let mut headers = reqwest::header::HeaderMap::new();
-                    headers.insert(
-                        "Authorization",
-                        format!("Bearer {api_key}")
-                            .parse()
-                            .expect("Bearer token should parse"),
-                    );
-                    headers
-                })
-                .build()
-                .expect("bigmodel reqwest client should build"),
+            client,
+            model: model.into(),
         }
     }
 
-    fn post(&self, path: &str) -> reqwest::RequestBuilder {
-        let url = format!("{}/{}", self.base_url, path).replace("//", "/");
-        self.http_client.post(url)
+    fn create_completion_request(
+        &self,
+        completion_request: CompletionRequest,
+    ) -> Result<Value, CompletionError> {
+        // 构建消息顺序（上下文、聊天历史、提示）
+        let mut partial_history = vec![];
+        if let Some(docs) = completion_request.normalized_documents() {
+            partial_history.push(docs);
+        }
+        partial_history.extend(completion_request.chat_history);
+
+        // 使用前言初始化完整历史（如果不存在则为空）
+        let mut full_history: Vec<Message> = completion_request
+            .preamble
+            .map_or_else(Vec::new, |preamble| vec![Message::system(&preamble)]);
+
+        // 转换并扩展其余历史
+        full_history.extend(
+            partial_history
+                .into_iter()
+                .map(message::Message::try_into)
+                .collect::<Result<Vec<Message>, _>>()?,
+        );
+
+        let request = if completion_request.tools.is_empty() {
+            json!({
+                "model": self.model,
+                "messages": full_history,
+                "temperature": completion_request.temperature,
+            })
+        } else {
+            // tools
+            let tools = completion_request
+                .tools
+                .into_iter()
+                .map(|item| {
+                    let custom_function = Function {
+                        name: item.name,
+                        description: item.description,
+                        parameters: item.parameters,
+                    };
+                    CustomFunctionDefinition {
+                        type_field: "function".to_string(),
+                        function: custom_function,
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            tracing::debug!("tools: {:?}", tools);
+
+            json!({
+                "model": self.model,
+                "messages": full_history,
+                "temperature": completion_request.temperature,
+                "tools": tools,
+                "tool_choice": "auto",
+            })
+        };
+
+        let request = if let Some(params) = completion_request.additional_params {
+            json_utils::merge(request, params)
+        } else {
+            request
+        };
+
+        Ok(request)
     }
 
-    pub fn completion_model(&self, model: &str) -> CompletionModel {
-        CompletionModel::new(self.clone(), model)
-    }
-
-    // 为completion模型创建提取构建器
-    // pub fn extractor<T: JsonSchema + for<'a> Deserialize<'a> + Serialize + Send + Sync>(
-    //     &self,
-    //     model: &str,
-    // ) -> ExtractorBuilder<T, CompletionModel> {
-    //     ExtractorBuilder::new(self.completion_model(model))
-    // }
 }
 
-impl ProviderClient for Client {
-    type Input = String;
 
-    fn from_env() -> Self
-    where
-        Self: Sized,
-    {
-        let api_key = std::env::var("BIGMODEL_API_KEY").expect("BIGMODEL_KEY not set");
-        Self::new(&api_key)
-    }
+impl Provider for BigmodelExt {
+    const VERIFY_PATH: &'static str = "api/tags";
+    type Builder = BigmodelBuilder;
 
-    fn from_val(input: Self::Input) -> Self {
-        Self::new(&input)
-    }
-}
-impl CompletionClient for Client {
-    type CompletionModel = CompletionModel;
-
-    fn completion_model(&self, model: impl Into<String>) -> Self::CompletionModel {
-        CompletionModel::new(self.clone(), &model.into())
+    fn build<H>(_builder: &client::ClientBuilder<Self::Builder, <Self::Builder as ProviderBuilder>::ApiKey, H>) -> rig::http_client::Result<Self> {
+        Ok(Self)
     }
 }
 
+/// provider有那些功能
+impl<H> Capabilities<H> for BigmodelExt {
+    type Completion = Capable<CompletionModel<H>>;
+    type Embeddings = Nothing;
+    type Transcription = Nothing;
+
+    // #[cfg(feature = "image")]
+    // type ImageGeneration = Nothing;
+    //
+    // #[cfg(feature = "audio")]
+    // type AudioGeneration = Nothing;
+}
+
+impl DebugExt for BigmodelExt {}
+
+
+impl ProviderBuilder for BigmodelBuilder {
+    type Output = BigmodelExt;
+    type ApiKey = BigmodelApiKey;
+    const BASE_URL: &'static str = BIGMODEL_API_BASE_URL;
+}
+
+
+pub type Client<H = reqwest::Client> = client::Client<BigmodelExt, H>;
+pub type ClientBuilder<H = reqwest::Client> = client::ClientBuilder<BigmodelBuilder, String, H>;
+
+/// Rust 的孤儿规则（Orphan Rule）
+// impl ProviderClient for Client{
+//     type Input = String;
+//
+//     fn from_env() -> Self {
+//         let api_key = std::env::var("BIGMODEL_API_KEY").expect("BIGMODEL_API_KEY not set");
+//         Self::new(&api_key).unwrap()
+//     }
+//
+//     fn from_val(input: Self::Input) -> Self {
+//         Self::new(&input).unwrap()
+//     }
+// }
+
+
+// ---------- API Error and Response Structures ----------
 #[derive(Debug, Deserialize)]
 struct ApiErrorResponse {
     message: String,
@@ -114,11 +181,9 @@ enum ApiResponse<T> {
 // ================================================================
 // Bigmodel Completion API
 // ================================================================
-pub const BIGMODEL_GLM_4_FLASH: &str = "glm-4-flash";
 
-#[deprecated(note = "GLM-4.5-Flash 将于2026年1月30日下线")]
-pub const BIGMODEL_GLM_4_5_FLASH: &str = "glm-4.5-flash";
 pub const BIGMODEL_GLM_4_7_FLASH: &str = "glm-4.7-flash";
+
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -129,7 +194,7 @@ pub struct CompletionResponse {
     pub model: String,
     #[serde(rename = "request_id")]
     pub request_id: String,
-    pub usage: Usage,
+    pub usage: Option<Usage>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -314,12 +379,17 @@ pub struct Choice {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Usage {
-    #[serde(rename = "completion_tokens")]
-    pub completion_tokens: i64,
-    #[serde(rename = "prompt_tokens")]
-    pub prompt_tokens: i64,
-    #[serde(rename = "total_tokens")]
-    pub total_tokens: i64,
+    pub prompt_tokens: usize,
+    pub total_tokens: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_tokens_details: Option<PromptTokensDetails>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+pub struct PromptTokensDetails {
+    /// Cached tokens from prompt caching
+    #[serde(default)]
+    pub cached_tokens: usize,
 }
 
 impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionResponse> {
@@ -352,12 +422,20 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
                             "Response contained no message or tool call (empty)".to_owned(),
                         )
                     })?;
-                    let usage = completion::Usage {
-                        input_tokens: response.usage.prompt_tokens as u64,
-                        output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
-                            as u64,
-                        total_tokens: response.usage.total_tokens as u64,
-                    };
+                    let usage = response
+                        .usage
+                        .as_ref()
+                        .map(|usage| completion::Usage {
+                            input_tokens: usage.prompt_tokens as u64,
+                            output_tokens: (usage.total_tokens - usage.prompt_tokens) as u64,
+                            total_tokens: usage.total_tokens as u64,
+                            cached_input_tokens: usage
+                                .prompt_tokens_details
+                                .as_ref()
+                                .map(|d| d.cached_tokens as u64)
+                                .unwrap_or(0),
+                        })
+                        .unwrap_or_default();
                     tracing::debug!("response choices: {:?}: ", choice);
                     Ok(completion::CompletionResponse {
                         choice,
@@ -368,12 +446,20 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
                     let choice = OneOrMany::one(message::AssistantContent::Text(Text {
                         text: content.clone().unwrap_or_else(|| "".to_owned()),
                     }));
-                    let usage = completion::Usage {
-                        input_tokens: response.usage.prompt_tokens as u64,
-                        output_tokens: (response.usage.total_tokens - response.usage.prompt_tokens)
-                            as u64,
-                        total_tokens: response.usage.total_tokens as u64,
-                    };
+                    let usage = response
+                        .usage
+                        .as_ref()
+                        .map(|usage| completion::Usage {
+                            input_tokens: usage.prompt_tokens as u64,
+                            output_tokens: (usage.total_tokens - usage.prompt_tokens) as u64,
+                            total_tokens: usage.total_tokens as u64,
+                            cached_input_tokens: usage
+                                .prompt_tokens_details
+                                .as_ref()
+                                .map(|d| d.cached_tokens as u64)
+                                .unwrap_or(0),
+                        })
+                        .unwrap_or_default();
                     Ok(completion::CompletionResponse {
                         choice,
                         usage,
@@ -389,11 +475,7 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
     }
 }
 
-#[derive(Clone)]
-pub struct CompletionModel {
-    client: Client,
-    pub model: String,
-}
+
 
 // 函数定义
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -412,136 +494,97 @@ pub struct Function {
     pub parameters: serde_json::Value,
 }
 
-impl CompletionModel {
-    pub fn new(client: Client, model: &str) -> Self {
-        Self {
-            client,
-            model: model.to_string(),
-        }
-    }
 
-    fn create_completion_request(
-        &self,
-        completion_request: CompletionRequest,
-    ) -> Result<Value, CompletionError> {
-        // 构建消息顺序（上下文、聊天历史、提示）
-        let mut partial_history = vec![];
-        if let Some(docs) = completion_request.normalized_documents() {
-            partial_history.push(docs);
-        }
-        partial_history.extend(completion_request.chat_history);
 
-        // 使用前言初始化完整历史（如果不存在则为空）
-        let mut full_history: Vec<Message> = completion_request
-            .preamble
-            .map_or_else(Vec::new, |preamble| vec![Message::system(&preamble)]);
 
-        // 转换并扩展其余历史
-        full_history.extend(
-            partial_history
-                .into_iter()
-                .map(message::Message::try_into)
-                .collect::<Result<Vec<Message>, _>>()?,
-        );
-
-        let request = if completion_request.tools.is_empty() {
-            json!({
-                "model": self.model,
-                "messages": full_history,
-                "temperature": completion_request.temperature,
-            })
-        } else {
-            // tools
-            let tools = completion_request
-                .tools
-                .into_iter()
-                .map(|item| {
-                    let custom_function = Function {
-                        name: item.name,
-                        description: item.description,
-                        parameters: item.parameters,
-                    };
-                    CustomFunctionDefinition {
-                        type_field: "function".to_string(),
-                        function: custom_function,
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            tracing::debug!("tools: {:?}", tools);
-
-            json!({
-                "model": self.model,
-                "messages": full_history,
-                "temperature": completion_request.temperature,
-                "tools": tools,
-                "tool_choice": "auto",
-            })
-        };
-
-        let request = if let Some(params) = completion_request.additional_params {
-            json_utils::merge(request, params)
-        } else {
-            request
-        };
-
-        Ok(request)
-    }
-}
 
 /// 同步请求
-impl completion::CompletionModel for CompletionModel {
+impl<T> completion::CompletionModel for CompletionModel<T>
+where
+    T: HttpClientExt + Clone + Send + std::fmt::Debug + Default + 'static,
+{
     type Response = CompletionResponse;
     type StreamingResponse = openai::StreamingCompletionResponse;
-    type Client = Client;
+    type Client = Client<T>;
 
     fn make(client: &Self::Client, model: impl Into<String>) -> Self {
         Self::new(client.clone(), &model.into())
     }
 
-    async fn completion(
-        &self,
-        completion_request: CompletionRequest,
-    ) -> Result<completion::CompletionResponse<CompletionResponse>, CompletionError> {
-        tracing::debug!("create_completion_request========");
+    async fn completion(&self, completion_request: CompletionRequest) -> Result<completion::CompletionResponse<Self::Response>, CompletionError> {
+        let span = if tracing::Span::current().is_disabled() {
+            info_span!(
+                target: "rig::completions",
+                "chat",
+                gen_ai.operation.name = "chat",
+                gen_ai.provider.name = "groq",
+                gen_ai.request.model = self.model,
+                gen_ai.system_instructions = tracing::field::Empty,
+                gen_ai.response.id = tracing::field::Empty,
+                gen_ai.response.model = tracing::field::Empty,
+                gen_ai.usage.output_tokens = tracing::field::Empty,
+                gen_ai.usage.input_tokens = tracing::field::Empty,
+            )
+        } else {
+            tracing::Span::current()
+        };
+
+        span.record("gen_ai.system_instructions", &completion_request.preamble);
+
         let request = self.create_completion_request(completion_request)?;
 
-        tracing::debug!(
-            "request: \r\n {}",
-            serde_json::to_string_pretty(&request).unwrap()
-        );
+        if tracing::enabled!(tracing::Level::TRACE) {
+            tracing::trace!(target: "rig::completions",
+                "Groq completion request: {}",
+                serde_json::to_string_pretty(&request)?
+            );
+        }
 
-        let response = self
+        let body = serde_json::to_vec(&request)?;
+        let req = self
             .client
-            .post("/chat/completions")
-            .json(&request)
-            .send()
-            .await
+            .post("/chat/completions")?
+            .body(body)
             .map_err(|e| http_client::Error::Instance(e.into()))?;
 
-        if response.status().is_success() {
-            let data: Value = response.json().await.expect("api error");
-            tracing::debug!("response: {}", serde_json::to_string_pretty(&data).unwrap());
-            let data: ApiResponse<CompletionResponse> =
-                serde_json::from_value(data).expect("deserialize completion response");
-            match data {
-                ApiResponse::Ok(response) => {
-                    tracing::info!(target: "rig",
-                        "bigmodel completion token usage: {:?}",
-                        response.usage
-                    );
-                    response.try_into()
+        let async_block = async move {
+            let response = self.client.send::<_, Bytes>(req).await?;
+            let status = response.status();
+            let response_body = response.into_body().into_future().await?.to_vec();
+
+            if status.is_success() {
+                match serde_json::from_slice::<ApiResponse<CompletionResponse>>(&response_body)? {
+                    ApiResponse::Ok(response) => {
+                        let span = tracing::Span::current();
+                        span.record("gen_ai.response.id", response.id.clone());
+                        span.record("gen_ai.response.model_name", response.model.clone());
+                        if let Some(ref usage) = response.usage {
+                            span.record("gen_ai.usage.input_tokens", usage.prompt_tokens);
+                            span.record(
+                                "gen_ai.usage.output_tokens",
+                                usage.total_tokens - usage.prompt_tokens,
+                            );
+                        }
+
+                        if tracing::enabled!(tracing::Level::TRACE) {
+                            tracing::trace!(target: "rig::completions",
+                                "Groq completion response: {}",
+                                serde_json::to_string_pretty(&response)?
+                            );
+                        }
+
+                        response.try_into()
+                    }
+                    ApiResponse::Err(err) => Err(CompletionError::ProviderError(err.message)),
                 }
-                ApiResponse::Err(err) => Err(CompletionError::ProviderError(err.message)),
+            } else {
+                Err(CompletionError::ProviderError(
+                    String::from_utf8_lossy(&response_body).to_string(),
+                ))
             }
-        } else {
-            Err(CompletionError::ProviderError(
-                response
-                    .text()
-                    .await
-                    .map_err(|e| http_client::Error::Instance(e.into()))?,
-            ))
-        }
+        };
+
+        tracing::Instrument::instrument(async_block, span).await
     }
 
     async fn stream(
@@ -556,27 +599,11 @@ impl completion::CompletionModel for CompletionModel {
 
         let body = serde_json::to_vec(&request)?;
 
-        let url = format!(
-            "{}/{}",
-            self.client.base_url,
-            "/chat/completions".trim_start_matches('/')
-        );
 
-        let mut builder = http_client::Builder::new().uri(url).method(Method::POST);
-        for (header, value) in &self.client.default_headers {
-            builder = builder.header(header, value);
-        }
-
-        let auth_header = HeaderValue::from_str(&format!("Bearer {}", &self.client.api_key))
-            .map_err(http::Error::from)
-            .map_err(rig::http_client::Error::from)?;
-
-        builder = builder.header(header::AUTHORIZATION, auth_header);
-        builder = builder.header("Content-Type", "application/json");
-
-        let req = builder
+        let req = self.client
+            .post("/chat/completions")?
             .body(body)
-            .map_err(|e| CompletionError::HttpError(e.into()))?;
+            .map_err(|e| http_client::Error::Instance(e.into()))?;
 
         let span = if tracing::Span::current().is_disabled() {
             info_span!(
@@ -597,8 +624,10 @@ impl completion::CompletionModel for CompletionModel {
             tracing::Span::current()
         };
 
-        send_compatible_streaming_request(self.client.http_client.clone(), req)
+        send_compatible_streaming_request(self.client.clone(), req)
             .instrument(span)
             .await
     }
+
+
 }
