@@ -119,7 +119,7 @@ mod tests {
 
         let result = agent
             .prompt("今天几号了,距离下一个节日还有几天")
-            .multi_turn(1)
+            .max_turns(1)
             .await
             .unwrap();
         println!("{}", result);

@@ -117,7 +117,7 @@ async fn main() {
     let response = tool_agent
         .prompt("计算5+8=,然后在加12是多少")
         // 设置多轮对话的最大深度
-        // .multi_turn(10)
+        .max_turns(10)
         // .prompt("计算5+8是多少")
         .await
         .unwrap();

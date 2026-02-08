@@ -203,11 +203,7 @@ mod tests {
             .name("ai agent")
             .preamble("你是一个ai助手")
             .build();
-        let result = agent
-            .prompt("获取GitHub趋势榜")
-            .multi_turn(1)
-            .await
-            .unwrap();
+        let result = agent.prompt("获取GitHub趋势榜").max_turns(1).await.unwrap();
         println!("{}", result);
     }
 }
