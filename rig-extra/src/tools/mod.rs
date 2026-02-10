@@ -5,6 +5,5 @@ pub mod github_trending_tool;
 #[cfg(feature = "rig-extra-tools")]
 pub mod serpapi_tool;
 
-mod file_tool;
 #[cfg(feature = "rig-extra-tools")]
 pub mod tavily_tool;
