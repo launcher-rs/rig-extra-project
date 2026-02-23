@@ -132,6 +132,7 @@ impl<H> Capabilities<H> for BigmodelExt {
     type Completion = Capable<CompletionModel<H>>;
     type Embeddings = Nothing;
     type Transcription = Nothing;
+    type ModelListing = Nothing;
 
     // #[cfg(feature = "image")]
     // type ImageGeneration = Nothing;
@@ -444,6 +445,7 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
                         choice,
                         usage,
                         raw_response: response,
+                        message_id: None,
                     })
                 } else {
                     let choice = OneOrMany::one(message::AssistantContent::Text(Text {
@@ -467,6 +469,7 @@ impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionRe
                         choice,
                         usage,
                         raw_response: response,
+                        message_id: None,
                     })
                 }
             }
