@@ -25,6 +25,11 @@ schemars = "1.0.4"
 
 bytes = "1.10.1"
 
+# skills deps
+anyhow = { version = "1.0", optional = true }
+regex = { version = "1.10", optional = true }
+serde_yaml = { version = "0.9", optional = true }
+toml = { version = "0.8", optional = true }
 
 # tools-only deps, make optional and enable via feature rig-extra-tools
 chrono = { version = "0.4.42", optional = true }
@@ -67,5 +72,15 @@ rig-extra-tools = [
     "tavily2"
 ]
 
+# Enable skills module (includes audit which uses regex)
+rig-extra-skills = [
+    "anyhow",
+    "regex",
+    "serde_yaml",
+    "toml",
+    "rig-core",  # 需要 rig-core 来使用 Tool trait
+]
+
 [dev-dependencies]
 config = "0.15"
+tempfile = "3"

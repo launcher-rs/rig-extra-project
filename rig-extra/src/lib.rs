@@ -7,6 +7,8 @@ pub mod rand_agent;
 pub mod simple_rand_builder;
 #[cfg(feature = "rig-extra-tools")]
 pub mod tools;
+#[cfg(feature = "rig-extra-skills")]
+pub mod skills;
 
 pub use get_openrouter_model_list::*;
 

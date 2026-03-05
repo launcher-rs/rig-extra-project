@@ -1,0 +1,26 @@
+name = "search"
+description = "提供搜索功能的 skill"
+
+[[tools]]
+name = "web_search"
+description = "执行网络搜索"
+kind = "function"
+command = ""
+
+[tools.parameters]
+type = "object"
+required = ["query"]
+
+[tools.parameters.properties]
+query = { type = "string", description = "搜索关键词" }
+
+[[prompts]]
+name = "search_assistant"
+content = """
+你是一个专业的搜索助手。当用户提出问题时，你应该：
+1. 理解用户的问题意图
+2. 使用 web_search 工具进行搜索
+3. 整理并总结搜索结果，提供清晰的答案
+
+如果搜索结果为空或无法回答，请诚实地告诉用户。
+"""

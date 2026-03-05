@@ -1,0 +1,14 @@
+name = "weather"
+description = "获取天气信息。使用 wttr.in 服务，无需 API key。"
+
+[[tools]]
+name = "get_weather"
+description = "获取指定城市的当前天气和短期预报"
+kind = "function"
+
+[tools.parameters]
+type = "object"
+required = ["city"]
+
+[tools.parameters.properties]
+city = { type = "string", description = "城市名称，如 Beijing, Shanghai, Tokyo" }
