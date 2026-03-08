@@ -115,16 +115,6 @@ impl<T> CompletionModel<T> {
 impl Provider for BigmodelExt {
     const VERIFY_PATH: &'static str = "api/tags";
     type Builder = BigmodelBuilder;
-
-    fn build<H>(
-        _builder: &client::ClientBuilder<
-            Self::Builder,
-            <Self::Builder as ProviderBuilder>::ApiKey,
-            H,
-        >,
-    ) -> rig::http_client::Result<Self> {
-        Ok(Self)
-    }
 }
 
 /// provider有那些功能
@@ -144,9 +134,21 @@ impl<H> Capabilities<H> for BigmodelExt {
 impl DebugExt for BigmodelExt {}
 
 impl ProviderBuilder for BigmodelBuilder {
-    type Output = BigmodelExt;
+    type Extension<H>
+        = BigmodelExt
+    where
+        H: HttpClientExt;
     type ApiKey = BigmodelApiKey;
     const BASE_URL: &'static str = BIGMODEL_API_BASE_URL;
+
+    fn build<H>(
+        _builder: &client::ClientBuilder<Self, Self::ApiKey, H>,
+    ) -> http_client::Result<Self::Extension<H>>
+    where
+        H: HttpClientExt,
+    {
+        Ok(BigmodelExt)
+    }
 }
 
 pub type Client<H = reqwest::Client> = client::Client<BigmodelExt, H>;

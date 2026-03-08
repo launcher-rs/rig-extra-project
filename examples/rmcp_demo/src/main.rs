@@ -57,6 +57,7 @@ async fn main() {
     );
 
     let client_info = ClientInfo {
+        meta: None,
         protocol_version: Default::default(),
         capabilities: ClientCapabilities::default(),
         client_info: Implementation {
